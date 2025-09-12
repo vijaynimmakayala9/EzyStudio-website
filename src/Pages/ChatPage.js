@@ -47,7 +47,7 @@ const ChatPage = () => {
 
       try {
         const response = await axios.get(
-          `http://localhost:4051/api/staff/mybookings/${staffId}`
+          `http://31.97.206.144:4051/api/staff/mybookings/${staffId}`
         );
 
         if (response.data.success && response.data.bookings.length > 0) {
