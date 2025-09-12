@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import moment from "moment-timezone";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 
@@ -28,6 +29,9 @@ const DiagnosticsPage = () => {
   const [walletData, setWalletData] = useState(null);
   const [familyMembers, setFamilyMembers] = useState([]);
   const [selectedFamilyMember, setSelectedFamilyMember] = useState("");
+  const [availableDates, setAvailableDates] = useState([]);
+  const [slotLoading, setSlotLoading] = useState(false);
+  const [slotError, setSlotError] = useState("");
 
   const staffId = localStorage.getItem("staffId");
 
@@ -86,6 +90,30 @@ const DiagnosticsPage = () => {
     }
   };
 
+  // Fetch available slots for a diagnostic center
+  const fetchSlots = async (diagnosticId, date, type) => {
+    setSlotLoading(true);
+    setSlotError("");
+    try {
+      const response = await axios.get(
+        `http://31.97.206.144:4051/api/staff/diagnosticslots/${diagnosticId}?date=${date}&type=${type}`
+      );
+      
+      if (response.data.slots && response.data.slots.length > 0) {
+        setAvailableSlots(response.data.slots);
+      } else {
+        setAvailableSlots([]);
+        setSlotError("No slots available for the selected date");
+      }
+    } catch (error) {
+      console.error("Error fetching slots:", error);
+      setSlotError("Error fetching available slots");
+      setAvailableSlots([]);
+    } finally {
+      setSlotLoading(false);
+    }
+  };
+
   // Handle popup close
   const handlePopupClose = () => {
     setShowPopup(false);
@@ -96,6 +124,8 @@ const DiagnosticsPage = () => {
     setSelectedTime("");
     setSelectedAddress("");
     setSelectedFamilyMember("");
+    setAvailableDates([]);
+    setSlotError("");
   };
 
   // Handle Diagnostic Center selection
@@ -105,28 +135,42 @@ const DiagnosticsPage = () => {
     // Fetch addresses when diagnostic is selected
     await fetchAddresses();
     
+    // Extract unique dates from both slot types
+    const homeDates = diagnostic.homeCollectionSlots
+      .filter(slot => !slot.isBooked)
+      .map(slot => slot.date);
+    
+    const centerDates = diagnostic.centerVisitSlots
+      .filter(slot => !slot.isBooked)
+      .map(slot => slot.date);
+    
+    // Combine and get unique dates
+    const allDates = [...new Set([...homeDates, ...centerDates])].sort();
+    setAvailableDates(allDates);
+    
     setShowPopup(true);
   };
 
   // Handle Home Collection or Center Visit selection
-  const handleOptionSelect = (option) => {
+  const handleOptionSelect = async (option) => {
     setSelectedOption(option);
+    setSelectedTime("");
+    setAvailableSlots([]);
     
-    if (option === "Home Collection") {
-      // Filter available home collection slots
-      const slots = selectedDiagnostic.homeCollectionSlots.filter(slot => !slot.isBooked);
-      setAvailableSlots(slots);
-    } else {
-      // For center visit, show available center visit slots
-      const slots = selectedDiagnostic.centerVisitSlots.filter(slot => !slot.isBooked);
-      setAvailableSlots(slots);
+    if (selectedDate) {
+      await fetchSlots(selectedDiagnostic._id, selectedDate, option);
     }
   };
 
   // Handle Date Selection
-  const handleDateSelect = (date) => {
+  const handleDateSelect = async (date) => {
     setSelectedDate(date);
     setSelectedTime("");
+    setAvailableSlots([]);
+    
+    if (selectedOption) {
+      await fetchSlots(selectedDiagnostic._id, date, selectedOption);
+    }
   };
 
   // Handle Time Selection
@@ -142,10 +186,6 @@ const DiagnosticsPage = () => {
       [name]: value
     }));
   };
-
-
-
-  
 
   // Create new address
   const handleCreateAddress = async () => {
@@ -369,120 +409,85 @@ const DiagnosticsPage = () => {
               </div>
             </div>
 
-            {/* Home Collection Options */}
-            {selectedOption === "Home Collection" && (
-              <>
-                {/* Address Selection */}
-                <div className="mb-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="text-lg font-semibold">Select Address</h4>
-                    <button
-                      onClick={() => setShowAddressForm(true)}
-                      className="text-sm text-blue-600 hover:text-blue-800"
-                    >
-                      + Add New Address
-                    </button>
-                  </div>
-                  
-                  {addresses.length > 0 ? (
-                    <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto">
-                      {addresses.map((address) => (
-                        <div
-                          key={address._id}
-                          onClick={() => setSelectedAddress(address._id)}
-                          className={`p-3 border rounded-md cursor-pointer ${selectedAddress === address._id ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
-                        >
-                          <h4 className="font-medium">{address.addressType}</h4>
-                          <p className="text-sm text-gray-600">
-                            {address.street}, {address.city}, {address.state} - {address.postalCode}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-gray-600">No addresses found. Please add an address for home collection.</p>
-                  )}
-                </div>
-
-                {/* Date and Time Selection */}
-                <div className="mb-6">
-                  <h4 className="text-lg font-semibold mb-2">Select Date</h4>
+            {/* Date Selection */}
+            {selectedOption && (
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold mb-2">Select Date</h4>
+                {availableDates.length > 0 ? (
                   <div className="grid grid-cols-3 gap-2">
-                    {selectedDiagnostic.homeCollectionSlots
-                      .filter(slot => !slot.isBooked)
-                      .map((slot, index) => (
-                        <button
-                          key={index}
-                          onClick={() => handleDateSelect(slot.date)}
-                          className={`p-2 rounded-md text-sm ${selectedDate === slot.date ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-                        >
-                          {new Date(slot.date).toLocaleDateString('en-IN')}
-                        </button>
-                      ))}
+                    {availableDates.map((date, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleDateSelect(date)}
+                        className={`p-2 rounded-md text-sm ${selectedDate === date ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+                      >
+                        {new Date(date).toLocaleDateString('en-IN')}
+                      </button>
+                    ))}
                   </div>
-                </div>
-
-                {selectedDate && (
-                  <div className="mb-6">
-                    <h4 className="text-lg font-semibold mb-2">Select Time Slot</h4>
-                    <div className="grid grid-cols-3 gap-2">
-                      {selectedDiagnostic.homeCollectionSlots
-                        .filter(slot => slot.date === selectedDate && !slot.isBooked)
-                        .map((slot, index) => (
-                          <button
-                            key={index}
-                            onClick={() => handleTimeSelect(slot.timeSlot)}
-                            className={`p-2 rounded-md text-sm ${selectedTime === slot.timeSlot ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-                          >
-                            {slot.timeSlot}
-                          </button>
-                        ))}
-                    </div>
-                  </div>
+                ) : (
+                  <p className="text-gray-600">No available dates found.</p>
                 )}
-              </>
+              </div>
             )}
 
-            {/* Center Visit Options */}
-            {selectedOption === "Center Visit" && (
-              <>
-                {/* Date and Time Selection */}
-                <div className="mb-6">
-                  <h4 className="text-lg font-semibold mb-2">Select Date</h4>
-                  <div className="grid grid-cols-3 gap-2">
-                    {selectedDiagnostic.centerVisitSlots
-                      .filter(slot => !slot.isBooked)
-                      .map((slot, index) => (
-                        <button
-                          key={index}
-                          onClick={() => handleDateSelect(slot.date)}
-                          className={`p-2 rounded-md text-sm ${selectedDate === slot.date ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-                        >
-                          {new Date(slot.date).toLocaleDateString('en-IN')}
-                        </button>
-                      ))}
-                  </div>
+            {/* Home Collection Address Selection */}
+            {selectedOption === "Home Collection" && selectedDate && (
+              <div className="mb-6">
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="text-lg font-semibold">Select Address</h4>
+                  <button
+                    onClick={() => setShowAddressForm(true)}
+                    className="text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    + Add New Address
+                  </button>
                 </div>
+                
+                {addresses.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto">
+                    {addresses.map((address) => (
+                      <div
+                        key={address._id}
+                        onClick={() => setSelectedAddress(address._id)}
+                        className={`p-3 border rounded-md cursor-pointer ${selectedAddress === address._id ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
+                      >
+                        <h4 className="font-medium">{address.addressType}</h4>
+                        <p className="text-sm text-gray-600">
+                          {address.street}, {address.city}, {address.state} - {address.postalCode}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-600">No addresses found. Please add an address for home collection.</p>
+                )}
+              </div>
+            )}
 
-                {selectedDate && (
-                  <div className="mb-6">
-                    <h4 className="text-lg font-semibold mb-2">Select Time Slot</h4>
-                    <div className="grid grid-cols-3 gap-2">
-                      {selectedDiagnostic.centerVisitSlots
-                        .filter(slot => slot.date === selectedDate && !slot.isBooked)
-                        .map((slot, index) => (
-                          <button
-                            key={index}
-                            onClick={() => handleTimeSelect(slot.timeSlot)}
-                            className={`p-2 rounded-md text-sm ${selectedTime === slot.timeSlot ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-                          >
-                            {slot.timeSlot}
-                          </button>
-                        ))}
-                    </div>
+            {/* Time Slot Selection */}
+            {selectedDate && selectedOption && (
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold mb-2">Select Time Slot</h4>
+                {slotLoading && <p className="text-gray-600">Loading available slots...</p>}
+                {slotError && <p className="text-red-500">{slotError}</p>}
+                {!slotLoading && availableSlots.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {availableSlots.map((slot, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleTimeSelect(slot.timeSlot)}
+                        className={`p-2 rounded-md text-sm ${selectedTime === slot.timeSlot ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+                      >
+                        {slot.timeSlot}
+                      </button>
+                    ))}
                   </div>
                 )}
-              </>
+                {!slotLoading && availableSlots.length === 0 && !slotError && (
+                  <p className="text-gray-600">No available time slots for the selected date.</p>
+                )}
+              </div>
             )}
             
             {/* Action Buttons */}

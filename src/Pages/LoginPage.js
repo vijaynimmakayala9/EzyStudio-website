@@ -1,107 +1,89 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; // For navigation after successful login
-import axios from "axios"; // To make HTTP requests
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const navigate = useNavigate(); // Hook for navigation
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!email || !password) {
       setError("Please fill in both fields.");
       return;
     }
 
-    // Prepare data to send to API
-    const loginData = {
-      email: email,
-      password: password,
-    };
-
     try {
-      // Call the API for staff login
-      const response = await axios.post("http://31.97.206.144:4051/api/staff/login-staff", loginData);
+      const response = await axios.post(
+        "http://31.97.206.144:4051/api/staff/login-staff",
+        { email, password }
+      );
 
       if (response.status === 200) {
-        // Successful login, store staff data in localStorage
-        const { staff } = response.data; // Destructure staff object
-        const { _id, name } = staff; // Extract _id and name
-
-        // Save staffId and name to localStorage
-        localStorage.setItem("staffId", _id); // Store _id as staffId
+        const { staff } = response.data;
+        const { _id, name } = staff;
+        localStorage.setItem("staffId", _id);
         localStorage.setItem("name", name);
-
-        // Log the staffId to the console
-        console.log("Logged in with staffId:", _id);
-
-        // Redirect to home page
-        navigate("/");
+        navigate("/home");
       }
     } catch (error) {
-      // Handle errors (invalid login credentials)
       setError("Invalid email or password.");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-96">
-        <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">Login</h2>
+    <div className="container vh-100 d-flex align-items-center justify-content-center">
+      <div className="row shadow-lg rounded-5 w-75" style={{ minHeight: "60vh" }}>
+        {/* Left Image */}
+        <div className="col-md-6 d-none d-md-block p-0">
+          <img
+            src="/logo.png"
+            alt="Login Illustration"
+            className="img-fluid h-100 w-100 p-5"
+            style={{ objectFit: "cover", borderTopLeftRadius: "0.5rem", borderBottomLeftRadius: "0.5rem" }}
+          />
+        </div>
 
-        {/* Displaying Error Message */}
-        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+        {/* Right Form */}
+        <div className="col-12 col-md-6 d-flex align-items-center justify-content-center bg-white p-4 rounded-end">
+          <div className="w-100" style={{ maxWidth: "400px" }}>
+            <h1 className="text-center mb-4 fs-3" style={{ fontWeight: 900 }}>Login</h1>
 
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-gray-700 font-semibold">
-              Email Address
-            </label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter your email"
-              required
-            />
+
+            {error && <div className="alert alert-danger text-center">{error}</div>}
+
+            <form onSubmit={handleSubmit}>
+              <div className="mb-3">
+                <label htmlFor="email" className="form-label">Email Address</label>
+                <input
+                  type="email"
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="form-control"
+                  placeholder="Enter your email"
+                  required
+                />
+              </div>
+
+              <div className="mb-3">
+                <label htmlFor="password" className="form-label">Password</label>
+                <input
+                  type="password"
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="form-control"
+                  placeholder="Enter your password"
+                  required
+                />
+              </div>
+
+              <button type="submit" className="btn btn-primary w-100">Login</button>
+            </form>
           </div>
-
-          <div>
-            <label htmlFor="password" className="block text-gray-700 font-semibold">
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter your password"
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="w-full p-3 bg-blue-500 text-white font-semibold rounded-md hover:bg-blue-600 transition duration-300"
-          >
-            Login
-          </button>
-        </form>
-
-        <div className="mt-4 text-center">
-          <p className="text-sm text-gray-600">
-            Don't have an account?{" "}
-            <a href="/signup" className="text-blue-500 hover:underline">
-              Sign up
-            </a>
-          </p>
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import Razorpay from "razorpay-checkout";
+import moment from "moment-timezone";
 
 const DoctorListPage = () => {
   const { categoryName } = useParams();
@@ -26,8 +26,10 @@ const DoctorListPage = () => {
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [bookingData, setBookingData] = useState(null);
   const [processingPayment, setProcessingPayment] = useState(false);
-  const [consultationType, setConsultationType] = useState("Online");
+  const [consultationType, setConsultationType] = useState("online");
   const [walletData, setWalletData] = useState(null);
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
   const navigate = useNavigate();
   const staffId = localStorage.getItem("staffId");
 
@@ -85,148 +87,139 @@ const DoctorListPage = () => {
     }
   };
 
-  const handleBooking = async () => {
-  if (!selectedFamilyMember) {
-    alert("Please select a family member for the consultation");
-    return;
-  }
-
-  if (!selectedDate || !selectedSlot) {
-    alert("Please select a date and time slot");
-    return;
-  }
-
-  setProcessingPayment(true);
-
-  try {
-    const consultationFee = selectedDoctor.consultation_fee;
+  // Fetch available slots for the selected doctor and date
+  const fetchAvailableSlots = async (doctorId, date) => {
+    if (!doctorId || !date) return;
     
-    // Fetch wallet data
-    let walletDataToUse = walletData;
-    if (!walletDataToUse) {
-      walletDataToUse = await fetchWalletData();
-    }
-
-    const availableDoctorBalance = walletDataToUse?.forDoctors || 0;
-    
-    // Check if wallet has sufficient balance
-    if (availableDoctorBalance >= consultationFee) {
-      // Full payment from wallet - no transaction ID needed
-      const response = await axios.post(
-        `http://31.97.206.144:4051/api/staff/consultationbooking/${staffId}`,
-        {
-          doctorId: selectedDoctor._id,
-          day: selectedSlot.day,
-          date: selectedDate,
-          timeSlot: selectedSlot.timeSlot,
-          familyMemberId: selectedFamilyMember,
-          type: consultationType,
-          useWallet: true,
-          // NO transactionId when using only wallet
-        }
+    setLoadingSlots(true);
+    try {
+      const response = await axios.get(
+        `http://31.97.206.144:4051/api/staff/doctor-slots/${doctorId}?date=${date}&type=${consultationType}`
       );
-
-      if (response.data.isSuccessfull) {
-        setBookingData(response.data);
-        setBookingSuccess(true);
-        alert("Booking Successful with Wallet!");
-      } else {
-        alert("Booking failed: " + response.data.message);
-      }
-    } else {
-      // Insufficient wallet balance - initiate Razorpay
-      initializeRazorpayPayment(consultationFee, availableDoctorBalance);
-    }
-  } catch (error) {
-    console.error("Error processing payment:", error);
-    alert("Payment processing failed. Please try again.");
-  } finally {
-    setProcessingPayment(false);
-  }
-};
-
-const initializeRazorpayPayment = async (amount, walletBalanceUsed) => {
-  const options = {
-    key: 'rzp_test_BxtRNvflG06PTV',
-    amount: (amount - walletBalanceUsed) * 100, // Amount in paise
-    currency: "INR",
-    name: "Your Company Name",
-    description: "Doctor Consultation Payment",
-    handler: async function (response) {
-      // This is the actual Razorpay payment ID
-      const razorpayTransactionId = response.razorpay_payment_id;
       
-      try {
-        const bookingResponse = await axios.post(
+      if (response.data.slots && response.data.slots.length > 0) {
+        setAvailableSlots(response.data.slots);
+      } else {
+        setAvailableSlots([]);
+        alert("No slots available for the selected date");
+      }
+    } catch (error) {
+      console.error("Error fetching slots:", error);
+      alert("Error fetching available slots");
+      setAvailableSlots([]);
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
+
+  const handleBooking = async () => {
+    if (!selectedFamilyMember) {
+      alert("Please select a family member for the consultation");
+      return;
+    }
+
+    if (!selectedDate || !selectedSlot) {
+      alert("Please select a date and time slot");
+      return;
+    }
+
+    setProcessingPayment(true);
+
+    try {
+      const consultationFee = selectedDoctor.consultation_fee;
+      
+      // Fetch wallet data
+      let walletDataToUse = walletData;
+      if (!walletDataToUse) {
+        walletDataToUse = await fetchWalletData();
+      }
+
+      const availableDoctorBalance = walletDataToUse?.forDoctors || 0;
+      
+      // Check if wallet has sufficient balance
+      if (availableDoctorBalance >= consultationFee) {
+        // Full payment from wallet - no transaction ID needed
+        const response = await axios.post(
           `http://31.97.206.144:4051/api/staff/consultationbooking/${staffId}`,
           {
             doctorId: selectedDoctor._id,
-            day: selectedSlot.day,
             date: selectedDate,
             timeSlot: selectedSlot.timeSlot,
             familyMemberId: selectedFamilyMember,
             type: consultationType,
-            transactionId: razorpayTransactionId, // Actual Razorpay ID
-            walletAmount: walletBalanceUsed, // How much wallet balance was used
+            useWallet: true,
+            // NO transactionId when using only wallet
           }
         );
 
-        if (bookingResponse.data.isSuccessfull) {
-          setBookingData(bookingResponse.data);
+        if (response.data.isSuccessfull) {
+          setBookingData(response.data);
           setBookingSuccess(true);
-          alert("Booking Successful!");
+          alert("Booking Successful with Wallet!");
         } else {
-          alert("Booking failed after payment: " + bookingResponse.data.message);
+          alert("Booking failed: " + response.data.message);
         }
-      } catch (error) {
-        console.error("Error completing booking:", error);
-        alert("Booking completion failed. Please contact support.");
-      }
-    },
-    prefill: {
-      name: "Patient Name",
-      email: "patient@example.com",
-      contact: "9999999999",
-    },
-    theme: {
-      color: "#3399cc",
-    },
-  };
-
-  const razorpayInstance = new window.Razorpay(options);
-  razorpayInstance.open();
-};
-  const handleRazorpayPaymentSuccess = async (paymentId, walletAmountUsed) => {
-    setProcessingPayment(true);
-    try {
-      const response = await axios.post(
-        `http://31.97.206.144:4051/api/staff/consultationbooking/${staffId}`,
-        {
-          doctorId: selectedDoctor._id,
-          day: selectedSlot.day,
-          date: selectedDate,
-          timeSlot: selectedSlot.timeSlot,
-          familyMemberId: selectedFamilyMember,
-          type: consultationType,
-          transactionId: paymentId,
-          useWallet: walletAmountUsed > 0,
-          walletAmount: walletAmountUsed,
-        }
-      );
-
-      if (response.data.isSuccessfull) {
-        setBookingData(response.data);
-        setBookingSuccess(true);
-        alert("Booking Successful!");
       } else {
-        alert("Booking failed after payment: " + response.data.message);
+        // Insufficient wallet balance - initiate Razorpay
+        initializeRazorpayPayment(consultationFee, availableDoctorBalance);
       }
     } catch (error) {
-      console.error("Error completing booking after payment:", error);
-      alert("Booking failed after payment. Please contact support.");
+      console.error("Error processing payment:", error);
+      alert("Payment processing failed. Please try again.");
     } finally {
       setProcessingPayment(false);
     }
+  };
+
+  const initializeRazorpayPayment = async (amount, walletBalanceUsed) => {
+    const options = {
+      key: 'rzp_test_BxtRNvflG06PTV',
+      amount: (amount - walletBalanceUsed) * 100, // Amount in paise
+      currency: "INR",
+      name: "Your Company Name",
+      description: "Doctor Consultation Payment",
+      handler: async function (response) {
+        // This is the actual Razorpay payment ID
+        const razorpayTransactionId = response.razorpay_payment_id;
+        
+        try {
+          const bookingResponse = await axios.post(
+            `http://31.97.206.144:4051/api/staff/consultationbooking/${staffId}`,
+            {
+              doctorId: selectedDoctor._id,
+              date: selectedDate,
+              timeSlot: selectedSlot.timeSlot,
+              familyMemberId: selectedFamilyMember,
+              type: consultationType,
+              transactionId: razorpayTransactionId, // Actual Razorpay ID
+              walletAmount: walletBalanceUsed, // How much wallet balance was used
+            }
+          );
+
+          if (bookingResponse.data.isSuccessfull) {
+            setBookingData(bookingResponse.data);
+            setBookingSuccess(true);
+            alert("Booking Successful!");
+          } else {
+            alert("Booking failed after payment: " + bookingResponse.data.message);
+          }
+        } catch (error) {
+          console.error("Error completing booking:", error);
+          alert("Booking completion failed. Please contact support.");
+        }
+      },
+      prefill: {
+        name: "Patient Name",
+        email: "patient@example.com",
+        contact: "9999999999",
+      },
+      theme: {
+        color: "#3399cc",
+      },
+    };
+
+    const razorpayInstance = new window.Razorpay(options);
+    razorpayInstance.open();
   };
 
   // Handle back navigation
@@ -238,6 +231,9 @@ const initializeRazorpayPayment = async (amount, walletBalanceUsed) => {
   const handleBookNow = (doctorId) => {
     const doctor = doctors.find((doc) => doc._id === doctorId);
     setSelectedDoctor(doctor);
+    setAvailableSlots([]);
+    setSelectedDate(null);
+    setSelectedSlot(null);
     fetchWalletData();
   };
 
@@ -245,11 +241,25 @@ const initializeRazorpayPayment = async (amount, walletBalanceUsed) => {
   const handleDateSelect = (date) => {
     setSelectedDate(date);
     setSelectedSlot(null);
+    fetchAvailableSlots(selectedDoctor._id, date);
   };
 
   // Handle slot selection
   const handleSlotSelect = (slot) => {
     setSelectedSlot(slot);
+  };
+
+  // Handle consultation type change
+  const handleConsultationTypeChange = (type) => {
+    setConsultationType(type);
+    setSelectedDate(null);
+    setSelectedSlot(null);
+    setAvailableSlots([]);
+    
+    // If we already have a doctor selected, fetch slots for the new type
+    if (selectedDoctor && selectedDate) {
+      fetchAvailableSlots(selectedDoctor._id, selectedDate);
+    }
   };
 
   // Handle new family member form change
@@ -300,6 +310,25 @@ const initializeRazorpayPayment = async (amount, walletBalanceUsed) => {
     setBookingSuccess(false);
     setBookingData(null);
     setWalletData(null);
+    setAvailableSlots([]);
+  };
+
+  // Get unique dates from doctor's slots
+  const getAvailableDates = () => {
+    if (!selectedDoctor) return [];
+    
+    let slots = [];
+    if (consultationType === "online") {
+      slots = selectedDoctor.onlineSlots || [];
+    } else if (consultationType === "offline") {
+      slots = selectedDoctor.offlineSlots || [];
+    } else {
+      slots = [...(selectedDoctor.onlineSlots || []), ...(selectedDoctor.offlineSlots || [])];
+    }
+    
+    // Get unique dates and sort them
+    const uniqueDates = [...new Set(slots.map(slot => slot.date))].sort();
+    return uniqueDates;
   };
 
   if (loading) {
@@ -391,14 +420,14 @@ const initializeRazorpayPayment = async (amount, walletBalanceUsed) => {
               <label className="block text-gray-700 mb-2">Consultation Type</label>
               <div className="flex space-x-4">
                 <button
-                  onClick={() => setConsultationType("Online")}
-                  className={`p-2 rounded-md ${consultationType === "Online" ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
+                  onClick={() => handleConsultationTypeChange("online")}
+                  className={`p-2 rounded-md ${consultationType === "online" ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
                 >
                   Online
                 </button>
                 <button
-                  onClick={() => setConsultationType("Offline")}
-                  className={`p-2 rounded-md ${consultationType === "Offline" ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
+                  onClick={() => handleConsultationTypeChange("offline")}
+                  className={`p-2 rounded-md ${consultationType === "offline" ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
                 >
                   Offline
                 </button>
@@ -409,41 +438,46 @@ const initializeRazorpayPayment = async (amount, walletBalanceUsed) => {
             <div className="mb-6">
               <label className="block text-gray-700 mb-2">Select Date</label>
               <div className="flex flex-wrap gap-2">
-                {selectedDoctor.onlineSlots
-                  .map((slot) => slot.date)
-                  .filter((value, index, self) => self.indexOf(value) === index)
-                  .map((date) => (
-                    <button
-                      key={date}
-                      onClick={() => handleDateSelect(date)}
-                      className={`p-2 rounded-md text-sm ${selectedDate === date ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'}`}
-                    >
-                      {new Date(date).toLocaleDateString()}
-                    </button>
-                  ))}
+                {getAvailableDates().map((date) => (
+                  <button
+                    key={date}
+                    onClick={() => handleDateSelect(date)}
+                    className={`p-2 rounded-md text-sm ${selectedDate === date ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'}`}
+                  >
+                    {new Date(date).toLocaleDateString()}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Display slots for the selected date */}
-            {selectedDate && (
-              <div className="mb-6">
-                <label className="block text-gray-700 mb-2">Select Time Slot</label>
-                <div className="flex flex-wrap gap-2">
-                  {selectedDoctor.onlineSlots
-                    .filter((slot) => slot.date === selectedDate)
-                    .map((slot) => (
-                      <button
-                        key={slot._id}
-                        onClick={() => handleSlotSelect(slot)}
-                        disabled={slot.isBooked}
-                        className={`p-2 rounded-md text-sm ${selectedSlot === slot ? 'bg-green-600 text-white' : slot.isBooked ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 text-white'}`}
-                      >
-                        {slot.timeSlot}
-                      </button>
-                    ))}
-                </div>
-              </div>
-            )}
+           {/* Display slots for the selected date */}
+{selectedDate && (
+  <div className="mb-6">
+    <label className="block text-gray-700 mb-2">
+      Select Time Slot {loadingSlots && "(Loading...)"}
+    </label>
+    <div className="flex flex-wrap gap-2">
+      {loadingSlots ? (
+        <p>Loading slots...</p>
+      ) : availableSlots.filter(slot => !slot.isExpired).length > 0 ? ( // Filter out expired slots
+        availableSlots
+          .filter(slot => !slot.isExpired) // Exclude expired slots
+          .map((slot) => (
+            <button
+              key={slot._id}
+              onClick={() => handleSlotSelect(slot)}
+              className={`p-2 rounded-md text-sm ${selectedSlot === slot ? 'bg-green-600 text-white' : 'bg-blue-500 text-white'}`}
+            >
+              {slot.timeSlot}
+            </button>
+          ))
+      ) : (
+        <p>No slots available for this date</p>
+      )}
+    </div>
+  </div>
+)}
+
 
             {/* Family Member Selection */}
             <div className="mb-6">

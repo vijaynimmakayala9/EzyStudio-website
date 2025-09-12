@@ -1,3 +1,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+
+@keyframes underlineSlide {
+  0% { width: 0; }
+  100% { width: 50%; } /* matches the w-1/4 */
+}
+
+.animate-underline {
+  animation: underlineSlide 0.8s forwards;
+}
+
