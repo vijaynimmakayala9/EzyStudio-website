@@ -2,17 +2,19 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const LoginPage = () => {
-  const [mobile, setMobile] = useState("");
+const VerifyOtpPage = () => {
+  const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const userId = localStorage.getItem("userId");
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!mobile) {
-      setError("Please enter your mobile number.");
+    if (!otp) {
+      setError("Please enter the OTP.");
       return;
     }
 
@@ -20,22 +22,22 @@ const LoginPage = () => {
 
     try {
       const response = await axios.post(
-        "http://194.164.148.244:4061/api/users/login",
-        { mobile }
+        "http://194.164.148.244:4061/api/users/verify-otp",
+        { userId, otp }
       );
 
       if (response.status === 200) {
-        // Store user data in localStorage for later
+        // Store the authenticated user's details in localStorage
         const { user } = response.data;
         localStorage.setItem("userId", user._id);
         localStorage.setItem("userName", user.name);
 
-        // Navigate to OTP verification page
-        navigate("/verify-otp");
+        // Redirect to the home page
+        navigate("/home");
       }
     } catch (error) {
       setLoading(false);
-      setError(error.response?.data?.message || "Login failed.");
+      setError(error.response?.data?.message || "OTP verification failed.");
     }
   };
 
@@ -45,21 +47,21 @@ const LoginPage = () => {
         <div className="col-12 col-md-6 d-flex align-items-center justify-content-center bg-white p-4 rounded-end">
           <div className="w-100" style={{ maxWidth: "400px" }}>
             <h1 className="text-center mb-4 fs-3" style={{ fontWeight: 900 }}>
-              Login
+              Verify OTP
             </h1>
 
             {error && <div className="alert alert-danger text-center">{error}</div>}
 
             <form onSubmit={handleSubmit}>
               <div className="mb-3">
-                <label htmlFor="mobile" className="form-label">Mobile Number</label>
+                <label htmlFor="otp" className="form-label">OTP</label>
                 <input
                   type="text"
-                  id="mobile"
-                  value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
+                  id="otp"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
                   className="form-control"
-                  placeholder="Enter your mobile number"
+                  placeholder="Enter OTP"
                   required
                 />
               </div>
@@ -69,7 +71,7 @@ const LoginPage = () => {
                 className="btn btn-primary w-100"
                 disabled={loading}
               >
-                {loading ? "Sending OTP..." : "Login"}
+                {loading ? "Verifying OTP..." : "Verify OTP"}
               </button>
             </form>
           </div>
@@ -79,4 +81,4 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
+export default VerifyOtpPage;

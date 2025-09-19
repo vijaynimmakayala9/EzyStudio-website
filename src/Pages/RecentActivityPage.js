@@ -9,6 +9,7 @@ const RecentActivityPage = () => {
 
   const staffId = localStorage.getItem("staffId");
 
+  // Fetch Doctor Booking
   const fetchDoctorBooking = async () => {
     try {
       const response = await axios.get(
@@ -21,10 +22,11 @@ const RecentActivityPage = () => {
       }
     } catch (err) {
       console.error("Error fetching doctor booking:", err);
-      setError("Error fetching doctor booking.");
+      setError("No Recent Doctor Activities Available.");
     }
   };
 
+  // Fetch Package Booking
   const fetchPackageBooking = async () => {
     try {
       const response = await axios.get(
@@ -37,7 +39,7 @@ const RecentActivityPage = () => {
       }
     } catch (err) {
       console.error("Error fetching package booking:", err);
-      setError("Error fetching package booking.");
+      setError("No Recent Package Activities Available.");
     }
   };
 
@@ -46,7 +48,7 @@ const RecentActivityPage = () => {
       fetchDoctorBooking();
       fetchPackageBooking();
     } else {
-      setError("Staff ID is not available.");
+      setError("Staff ID is missing. Please log in again.");
       setLoading(false);
     }
   }, [staffId]);
@@ -58,9 +60,9 @@ const RecentActivityPage = () => {
   }, [doctorBooking, packageBooking]);
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-50">
       <div className="py-12 px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">
+        <h1 className="text-2xl font-bold text-left text-gray-800 mb-4">
           Recent Activity
         </h1>
 
@@ -71,85 +73,64 @@ const RecentActivityPage = () => {
         ) : error ? (
           <p className="text-center text-lg text-red-500">{error}</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Recent Doctor Booking Card */}
-            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
-              <h2 className="text-2xl font-semibold text-blue-600 mb-4">
-                Recent Doctor Booking
-              </h2>
-              {doctorBooking ? (
-                <div>
-                  <p className="text-lg font-medium text-gray-800">
-                    Doctor: {doctorBooking.doctorId.name}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Specialization: {doctorBooking.doctorId.specialization}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Date:{" "}
-                    {new Date(doctorBooking.date).toLocaleDateString()} at{" "}
-                    {doctorBooking.timeSlot}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Payment Status:{" "}
-                    {doctorBooking.paymentStatus === "captured"
-                      ? "Paid"
-                      : "Pending"}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Total Price: ₹{doctorBooking.totalPrice}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Booking Status: {doctorBooking.status}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-gray-500">No recent doctor booking.</p>
-              )}
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+  {/* Doctor Booking Card */}
+  <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
+    {doctorBooking ? (
+      <div className="flex items-center">
+        {/* Doctor Image (small on left side) */}
+        <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100 mr-4">
+          <img
+            src={`http://31.97.206.144:4051${doctorBooking.doctorId.image}`}
+            alt={doctorBooking.doctorId.name}
+            className="w-full h-full object-cover"
+          />
+        </div>
 
-            {/* Recent Package Booking Card */}
+        {/* Doctor Info */}
+        <div className="flex flex-col">
+          <p className="text-lg font-medium text-gray-800">
+            <strong>{doctorBooking.doctorId.name}</strong>
+          </p>
+          <p className="text-sm text-gray-600">
+            {doctorBooking.doctorId.specialization}
+          </p>
+          <p className="text-sm text-gray-600">
+            {doctorBooking.doctorId.qualification}
+          </p>
+          <p className="text-sm text-gray-600">
+            Date: {new Date(doctorBooking.date).toLocaleDateString()} at{" "}
+            {doctorBooking.timeSlot}
+          </p>
+          <p className="text-sm text-gray-600">
+            Payment Status:{" "}
+            {doctorBooking.paymentStatus === "captured" ? "Paid" : "Pending"}
+          </p>
+          <p className="text-sm text-gray-600">
+            Price: ₹{doctorBooking.totalPrice}
+          </p>
+          <p className="text-sm text-gray-600">Status: {doctorBooking.status}</p>
+        </div>
+      </div>
+    ) : (
+      <p className="text-gray-500">No recent doctor booking.</p>
+    )}
+  </div>
+
+
+            {/* Package Booking Card */}
             <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
-              <h2 className="text-2xl font-semibold text-green-600 mb-4">
-                Recent Package Booking
-              </h2>
               {packageBooking ? (
-                <div>
+                <div className="flex flex-col">
                   <p className="text-lg font-medium text-gray-800">
-                    Package: {packageBooking.name}
+                    <strong>{packageBooking.name}</strong>
                   </p>
                   <p className="text-sm text-gray-600">
                     Price: ₹{packageBooking.price}
                   </p>
                   <p className="text-sm text-gray-600">
-                    Total Tests Included: {packageBooking.totalTestsIncluded}
+                    Total Tests: {packageBooking.totalTestsIncluded}
                   </p>
-                  <p className="text-sm text-gray-600">
-                    {packageBooking.description}
-                  </p>
-
-                  <div className="mt-4">
-                    <p className="font-semibold text-gray-800">
-                      Included Tests:
-                    </p>
-                    <ul className="list-disc pl-6">
-                      {packageBooking.includedTests.map((test, index) => (
-                        <li key={index} className="text-sm text-gray-600">
-                          {test.name} ({test.subTestCount} sub-tests)
-                          <ul className="list-inside pl-4">
-                            {test.subTests.map((subTest, subIndex) => (
-                              <li
-                                key={subIndex}
-                                className="text-sm text-gray-500"
-                              >
-                                - {subTest}
-                              </li>
-                            ))}
-                          </ul>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
                 </div>
               ) : (
                 <p className="text-gray-500">No recent package booking.</p>
