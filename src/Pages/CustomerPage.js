@@ -28,7 +28,7 @@ const CustomerPage = () => {
     try {
       setLoading(true);
       const res = await axios.get(
-        `http://194.164.148.244:4061/api/users/allcustomers/${userId}`
+        `https://api.editezy.com/api/users/allcustomers/${userId}`
       );
       setCustomers(res.data.customers || res.data || []);
     } catch (err) {
@@ -48,12 +48,12 @@ const CustomerPage = () => {
     try {
       if (editId) {
         await axios.put(
-          `http://194.164.148.244:4061/api/users/update-customers/${userId}/${editId}`,
+          `https://api.editezy.com/api/users/update-customers/${userId}/${editId}`,
           { customer: form }
         );
       } else {
         await axios.post(
-          `http://194.164.148.244:4061/api/users/addcustomer/${userId}`,
+          `https://api.editezy.com/api/users/addcustomer/${userId}`,
           { customer: form }
         );
       }
@@ -79,7 +79,7 @@ const CustomerPage = () => {
     if (!window.confirm('Are you sure?')) return;
     try {
       await axios.delete(
-        `http://194.164.148.244:4061/api/users/delete-customers/${userId}/${id}`
+        `https://api.editezy.com/api/users/delete-customers/${userId}/${id}`
       );
       fetchCustomers();
     } catch (err) {

@@ -14,7 +14,7 @@ const CategoryWisePoster = () => {
       try {
         setLoading(true);
         const response = await axios.get(
-          "http://194.164.148.244:4061/api/poster/canvasposters"
+          "https://api.editezy.com/api/poster/canvasposters"
         );
         const posters = response.data.posters || [];
 

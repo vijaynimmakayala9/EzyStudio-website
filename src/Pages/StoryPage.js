@@ -24,7 +24,7 @@ const StoryPage = () => {
   // Fetch all stories
   useEffect(() => {
     axios
-      .get("http://194.164.148.244:4061/api/users/getAllStories")
+      .get("https://api.editezy.com/api/users/getAllStories")
       .then((response) => {
         const validStories = response.data.stories.filter(
           (story) => new Date(story.expired_at) > new Date()
@@ -60,7 +60,7 @@ const StoryPage = () => {
 
     try {
       const response = await axios.post(
-        `http://194.164.148.244:4061/api/users/post/${userId}`,
+        `https://api.editezy.com/api/users/post/${userId}`,
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
@@ -97,7 +97,7 @@ const StoryPage = () => {
 
     try {
       await axios.delete(
-        `http://194.164.148.244:4061/api/users/deletestory/${userId}/${storyId}`,
+        `https://api.editezy.com/api/users/deletestory/${userId}/${storyId}`,
         {
           data: { mediaUrl },
         }

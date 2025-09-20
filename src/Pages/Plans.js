@@ -11,7 +11,7 @@ const Plans = () => {
     const fetchPlans = async () => {
       try {
         const response = await axios.get(
-          "http://194.164.148.244:4061/api/plans/getallplan"
+          "https://api.editezy.com/api/plans/getallplan"
         );
         if (response.data && response.data.plans) {
           setPlans(response.data.plans);
