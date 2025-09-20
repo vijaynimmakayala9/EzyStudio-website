@@ -80,7 +80,7 @@ const Navbar = () => {
               <button onClick={() => navigate("/home")} className="flex items-center gap-1">
                 <IoHomeOutline size={20} /> Home
               </button>
-              <button onClick={() => navigate("/category")} className="flex items-center gap-1">
+              <button onClick={() => navigate("/categories")} className="flex items-center gap-1">
                 <IoMenuOutline size={20} /> Category
               </button>
               <button onClick={() => navigate("/horoscope")} className="flex items-center gap-1">
@@ -89,7 +89,7 @@ const Navbar = () => {
               <button onClick={() => navigate("/create")} className="flex items-center gap-1">
                 <IoAddOutline size={20} /> Create
               </button>
-              <button onClick={() => navigate("/customers")} className="flex items-center gap-1">
+              <button onClick={() => navigate("/customer")} className="flex items-center gap-1">
                 <IoPersonOutline size={20} /> Customers
               </button>
             </div>

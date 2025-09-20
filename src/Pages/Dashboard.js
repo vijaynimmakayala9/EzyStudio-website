@@ -1,5 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { FaTools, FaUserCircle, FaHeadset, FaArrowLeft, FaShieldAlt, FaFileContract } from "react-icons/fa";
+import {
+  FaUser,
+  FaGear,
+  FaGift,
+  FaUsers,
+  FaFileInvoice,
+  FaBuilding,
+  FaTrash,
+  FaCircleQuestion,
+  FaEnvelope,
+  FaWandMagicSparkles,
+  FaNoteSticky, // ✅ use this instead of FaRegStickyNote
+  FaImage,
+} from "react-icons/fa6";
+import Navbar from './Navbar'
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("Account");
@@ -20,34 +36,89 @@ export default function Dashboard() {
       name: "Background Remover",
       desc: "Remove image backgrounds instantly",
       route: "/background-remover",
+      icon: <FaImage className="text-blue-500" />,
     },
     {
       name: "Caption Generator",
       desc: "Generate engaging captions",
       route: "/caption-generator",
+      icon: <FaWandMagicSparkles className="text-green-500" />,
     },
     {
       name: "WhatsApp Stickers",
       desc: "Create custom stickers",
       route: "/stickers",
+      icon: <FaNoteSticky className="text-pink-500" />, // ✅ fixed
     },
   ];
 
   // account tab items
   const account = [
-    { name: "My Profile", desc: "Manage your personal information", route: "/profile" },
-    { name: "Settings", desc: "App preferences and configuration", route: "/settings" },
-    { name: "Refer & Earn", desc: "Invite friends and earn rewards", route: "/refer" },
-    { name: "Add Customers", desc: "Manage your customer database", route: "/customers/add" },
-    { name: "Create Invoice", desc: "Generate professional invoices", route: "/invoice" },
-    { name: "Add Business", desc: "Register your business profile", route: "/business/add" },
-    { name: "Delete Account", desc: "Permanently remove your account", route: "/delete-account" },
+    {
+      name: "My Profile",
+      desc: "Manage your personal information",
+      route: "/profile",
+      icon: <FaUser className="text-blue-500" />,
+    },
+    // {
+    //   name: "Settings",
+    //   desc: "App preferences and configuration",
+    //   route: "/settings",
+    //   icon: <FaGear className="text-gray-500" />,
+    // },
+    {
+      name: "Refer & Earn",
+      desc: "Invite friends and earn rewards",
+      route: "/refer",
+      icon: <FaGift className="text-yellow-500" />,
+    },
+    {
+      name: "Add Customers",
+      desc: "Manage your customer database",
+      route: "/customer",
+      icon: <FaUsers className="text-green-500" />,
+    },
+    {
+      name: "Create Invoice",
+      desc: "Generate professional invoices",
+      route: "/invoice",
+      icon: <FaFileInvoice className="text-purple-500" />,
+    },
+    {
+      name: "Add Business",
+      desc: "Register your business profile",
+      route: "#",
+      icon: <FaBuilding className="text-indigo-500" />,
+    },
+    {
+      name: "Delete Account",
+      desc: "Permanently remove your account",
+      route: "/delete-account",
+      icon: <FaTrash className="text-red-500" />,
+    },
   ];
 
   // support tab items
   const support = [
-    { name: "FAQ", desc: "Frequently asked questions", route: "/faq" },
-    { name: "Contact Support", desc: "Get help from our team", route: "/contact" },
+    {
+      name: "Contact Support",
+      desc: "Get help from our team",
+      route: "/contact",
+      icon: <FaEnvelope className="text-green-500" />,
+    },
+    {
+      name: "Privacy Policy",
+      desc: "Read our privacy guidelines",
+      route: "https://ezystudio.onrender.com/privacy-and-policy",
+      icon: <FaShieldAlt className="text-blue-500" />,
+    },
+    {
+      name: "Terms & Conditions",
+      desc: "View terms and conditions",
+      route: "https://ezystudio.onrender.com/terms-and-conditions",
+      icon: <FaFileContract className="text-purple-500" />,
+    },
+
   ];
 
   const getItems = () => {
@@ -57,21 +128,36 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="p-4 max-w-md mx-auto">
-      {/* Tabs */}
+    <>
+    <Navbar/>
+    <div className="p-4 max-w-md mx-auto mb-5">
+      {/* Header with Back Arrow */}
+      <div className="flex items-center mb-4">
+        <button onClick={() => navigate(-1)} className="mr-3">
+          <FaArrowLeft className="text-xl text-gray-600" />
+        </button>
+        <h1 className="text-xl font-bold">Dashboard</h1>
+      </div>
+
+      {/* Tabs with Icons */}
       <div className="flex justify-around mb-4">
-        {["Tools", "Account", "Support"].map((tab) => (
+        {[
+          { name: "Tools", icon: <FaTools /> },
+          { name: "Account", icon: <FaUserCircle /> },
+          { name: "Support", icon: <FaHeadset /> },
+        ].map((tab) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`flex-1 mx-1 py-2 rounded-md font-medium ${
-              activeTab === tab
-                ? "bg-blue-500 text-white"
-                : "bg-gray-100 text-gray-700"
-            }`}
+            key={tab.name}
+            onClick={() => setActiveTab(tab.name)}
+            className={`flex-1 mx-1 py-2 rounded-md font-medium flex flex-col items-center justify-center gap-1 transition-colors duration-200 ${activeTab === tab.name
+              ? "bg-blue-500 text-white"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
           >
-            {tab}
+            <span className="text-sm">{tab.icon}</span>
+            <span className="text-sm">{tab.name}</span>
           </button>
+
         ))}
       </div>
 
@@ -86,26 +172,34 @@ export default function Dashboard() {
           </div>
           <div>
             <h2 className="font-semibold text-lg">{userName}</h2>
-            <p className="text-sm">{userId}</p>
           </div>
         </div>
       )}
 
-      {/* Items */}
+      {/* Items List */}
       <div className="mt-4 space-y-3">
         {getItems().map((item, i) => (
           <div
             key={i}
-            className="rounded-xl shadow-md border p-3 bg-white hover:bg-gray-50 transition cursor-pointer"
-            onClick={() => navigate(item.route)}
+            className="rounded-xl shadow-md border p-3 bg-white hover:bg-gray-50 transition cursor-pointer flex items-center gap-3"
+            onClick={() => {
+              if (item.route.startsWith("http")) {
+                window.open(item.route, "_blank", "noopener,noreferrer");
+              } else {
+                navigate(item.route);
+              }
+            }}
           >
-            <h2 className="font-semibold text-lg">{item.name}</h2>
-            {item.desc && (
-              <p className="text-gray-500 text-sm">{item.desc}</p>
-            )}
+            {item.icon}
+            <div>
+              <h2 className="font-semibold text-lg">{item.name}</h2>
+              {item.desc && <p className="text-gray-500 text-sm">{item.desc}</p>}
+            </div>
           </div>
+
         ))}
       </div>
     </div>
+    </>
   );
 }

@@ -1,64 +1,38 @@
 import React, { useEffect, useState } from "react";
+import Navbar from "./Navbar";
+import {
+  FaGift,
+  FaClipboard,
+  FaShareAlt,
+  FaCheckCircle,
+  FaUserFriends,
+  FaArrowLeft,
+} from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 
 const ReferAndPay = () => {
-  const [walletBalance, setWalletBalance] = useState(null);
-  const [referralCode, setReferralCode] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [referralCode, setReferralCode] = useState("G0ZD178W");
   const [userId, setUserId] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [bankDetails, setBankDetails] = useState({
-    accountHolderName: "",
-    accountNumber: "",
-    ifscCode: "",
-    bankName: "",
-  });
+  const [copied, setCopied] = useState(false);
+  const navigate = useNavigate();
 
-  // Fetch userId from localStorage
   useEffect(() => {
     const storedUserId = localStorage.getItem("userId");
-    if (storedUserId) {
-      setUserId(storedUserId);
-    } else {
-      console.error("User ID not found in localStorage");
-    }
+    if (storedUserId) setUserId(storedUserId);
   }, []);
 
-  // Fetch wallet balance
-  const fetchWalletBalance = async () => {
-    if (!userId) return;
-    try {
-      const response = await fetch(`http://194.164.148.244:4061/api/users/wallet/${userId}`);
-      const data = await response.json();
-      setWalletBalance(data.wallet);
-    } catch (error) {
-      console.error("Error fetching wallet balance:", error);
-    }
-  };
-
-  // Fetch referral code
-  const fetchReferralCode = async () => {
-    if (!userId) return;
-    try {
-      const response = await fetch(`http://194.164.148.244:4061/api/users/refferalcode/${userId}`);
-      const data = await response.json();
-      setReferralCode(data.referralCode);
-    } catch (error) {
-      console.error("Error fetching referral code:", error);
-    }
-  };
-
-  // Copy referral code to clipboard
   const handleCopy = () => {
     navigator.clipboard.writeText(referralCode);
-    alert("Referral code copied!");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
-  // Share referral code (assuming a basic share link functionality)
   const handleShare = () => {
     const referralLink = `https://your-app.com/referral/${referralCode}`;
     if (navigator.share) {
       navigator.share({
-        title: 'Join our platform!',
+        title: "Join our platform!",
         text: `Use my referral code: ${referralCode} to get benefits.`,
         url: referralLink,
       });
@@ -67,151 +41,167 @@ const ReferAndPay = () => {
     }
   };
 
-  // Redeem request
-  const handleRedeem = async () => {
-    const { accountHolderName, accountNumber, ifscCode, bankName } = bankDetails;
-    if (!accountHolderName || !accountNumber || !ifscCode || !bankName) {
-      alert("Please fill in all the details.");
-      return;
-    }
-
-    try {
-      const response = await fetch(`http://194.164.148.244:4061/api/redeem/${userId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          accountHolderName,
-          accountNumber,
-          ifscCode,
-          bankName,
-        }),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        alert("Redeem successful!");
-        setIsModalOpen(false); // Close the modal after successful redemption
-      } else {
-        alert("Error during redemption. Please try again.");
-      }
-    } catch (error) {
-      console.error("Error during redeem:", error);
-      alert("An error occurred. Please try again.");
-    }
-  };
-
-  // Call APIs to fetch wallet and referral data
-  useEffect(() => {
-    if (userId) {
-      setIsLoading(true);
-      fetchWalletBalance();
-      fetchReferralCode();
-      setIsLoading(false);
-    }
-  }, [userId]);
-
-  if (isLoading || !userId) {
-    return <div>Loading...</div>;
-  }
-
   return (
-    <div className="p-6 bg-gray-50 rounded-lg shadow-md w-80">
-      {/* Wallet Balance Section */}
-      <div className="bg-white p-4 rounded-lg text-center mb-6">
-        <h3 className="text-xl font-semibold">Wallet Balance: ₹{walletBalance}</h3>
+    <>
+      <Navbar />
+
+      {/* Back Button */}
+      <div className="flex items-center p-4 max-w-md mx-auto">
         <button
-          onClick={() => setIsModalOpen(true)}
-          className="mt-4 bg-green-500 text-white py-2 px-6 rounded-lg hover:bg-green-600"
+          onClick={() => navigate(-1)}
+          className="flex items-center text-purple-600 hover:text-purple-800 transition-colors"
         >
-          Redeem Now
+          <FaArrowLeft className="mr-2" />
+          <span className="font-medium">Back</span>
         </button>
       </div>
 
-      {/* Referral Code Section */}
-      <div className="bg-white p-4 rounded-lg text-center">
-        <h4 className="text-lg font-semibold">Your Referral Code:</h4>
-        <p className="text-2xl font-bold text-indigo-600">{referralCode}</p>
-        <div className="flex justify-center space-x-4 mt-4">
-          <button
-            onClick={handleCopy}
-            className="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600"
-          >
-            Copy Referral Code
-          </button>
-          <button
-            onClick={handleShare}
-            className="bg-teal-500 text-white py-2 px-4 rounded-lg hover:bg-teal-600"
-          >
-            Share Referral Code
+      <div className="p-4 max-w-md mx-auto mb-5 font-sans bg-gray-50 min-h-screen">
+        {/* Page Heading */}
+        <h1 className="text-2xl sm:text-3xl font-bold text-center text-purple-700 mb-6">
+          Refer and Earn
+        </h1>
+
+        {/* Top Balance Card */}
+        <div className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl p-5 shadow-lg">
+          <h2 className="text-lg font-semibold mb-4">Earn Now</h2>
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-center flex-1">
+              <p className="text-2xl font-bold">₹100</p>
+              <p className="text-xs opacity-80">Total Earning till date</p>
+            </div>
+            <div className="text-center flex-1 border-l border-white border-opacity-20">
+              <p className="text-2xl font-bold">₹100</p>
+              <p className="text-xs opacity-80">Current Balance</p>
+            </div>
+          </div>
+          <button className="w-full bg-white text-purple-600 font-semibold py-3 rounded-lg shadow hover:bg-gray-100 transition-colors">
+            Redeem Now
           </button>
         </div>
-      </div>
 
-      {/* Redeem Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
-          <div className="bg-white p-6 rounded-lg w-96">
-            <h3 className="text-xl font-semibold mb-4">Redeem Now</h3>
-            <div className="mb-4">
-              <label htmlFor="accountHolderName" className="block font-medium">Account Holder Name</label>
-              <input
-                type="text"
-                id="accountHolderName"
-                className="mt-1 p-2 border rounded-lg w-full"
-                value={bankDetails.accountHolderName}
-                onChange={(e) => setBankDetails({ ...bankDetails, accountHolderName: e.target.value })}
-              />
+        {/* Referral Code Box */}
+        <div className="flex flex-col sm:flex-row items-center bg-purple-50 rounded-lg p-3 sm:p-4 justify-between gap-3 sm:gap-0 mt-6">
+          {/* Left Side: Referral Code */}
+          <div className="flex items-center space-x-2">
+            <FaGift className="text-purple-600 text-xl sm:text-2xl" />
+            <p className="font-mono text-base sm:text-lg font-semibold break-all">
+              {referralCode}
+            </p>
+          </div>
+
+          {/* Right Side: Buttons */}
+          <div className="flex space-x-2">
+            <button
+              onClick={handleCopy}
+              className="bg-white border border-gray-200 rounded-lg p-2 sm:p-3 shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center"
+              aria-label="Copy referral code"
+            >
+              {copied ? (
+                <FaCheckCircle className="text-green-500 text-lg sm:text-xl" />
+              ) : (
+                <FaClipboard className="text-gray-600 text-lg sm:text-xl" />
+              )}
+            </button>
+            <button
+              onClick={handleShare}
+              className="bg-purple-600 text-white px-3 sm:px-4 py-2 rounded-lg font-medium flex items-center space-x-1 hover:bg-purple-700 transition-colors text-sm sm:text-base"
+            >
+              <FaShareAlt className="text-sm sm:text-base" />
+              <span>Share</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Info Text */}
+        <p className="text-xs sm:text-sm text-gray-600 mt-3 text-center sm:text-left">
+          Did you know you can earn up to ₹3000 by referring 10 friends in a
+          month? That's equal to a month's subscription.
+        </p>
+
+        {/* Bonus Info */}
+        <div className="bg-gradient-to-r from-indigo-100 to-purple-100 rounded-xl p-5 shadow-md mt-6 border border-indigo-100">
+          <div className="flex items-start space-x-3">
+            <div className="bg-purple-600 p-2 rounded-full">
+              <FaUserFriends className="text-white text-lg" />
             </div>
-            <div className="mb-4">
-              <label htmlFor="accountNumber" className="block font-medium">Account Number</label>
-              <input
-                type="text"
-                id="accountNumber"
-                className="mt-1 p-2 border rounded-lg w-full"
-                value={bankDetails.accountNumber}
-                onChange={(e) => setBankDetails({ ...bankDetails, accountNumber: e.target.value })}
-              />
-            </div>
-            <div className="mb-4">
-              <label htmlFor="ifscCode" className="block font-medium">IFSC Code</label>
-              <input
-                type="text"
-                id="ifscCode"
-                className="mt-1 p-2 border rounded-lg w-full"
-                value={bankDetails.ifscCode}
-                onChange={(e) => setBankDetails({ ...bankDetails, ifscCode: e.target.value })}
-              />
-            </div>
-            <div className="mb-4">
-              <label htmlFor="bankName" className="block font-medium">Bank Name</label>
-              <input
-                type="text"
-                id="bankName"
-                className="mt-1 p-2 border rounded-lg w-full"
-                value={bankDetails.bankName}
-                onChange={(e) => setBankDetails({ ...bankDetails, bankName: e.target.value })}
-              />
-            </div>
-            <div className="flex justify-end space-x-4">
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="bg-gray-500 text-white py-2 px-4 rounded-lg"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleRedeem}
-                className="bg-green-500 text-white py-2 px-6 rounded-lg"
-              >
-                Redeem
-              </button>
+            <div>
+              <h4 className="font-semibold text-purple-800 mb-1">
+                Introduce a Friend & Get Rewards!
+              </h4>
+              <p className="text-sm text-gray-700">
+                Get <span className="font-semibold text-purple-600">30 Credit</span>{" "}
+                INSTANTLY! Bonus: Get{" "}
+                <span className="font-semibold text-purple-600">50 Credit</span>{" "}
+                More When They Make a Purchase!
+              </p>
             </div>
           </div>
         </div>
-      )}
-    </div>
+
+        {/* How it Works Section */}
+        <div className="mt-6 bg-white rounded-xl p-5 shadow-md">
+          <h4 className="font-semibold text-lg mb-4 text-gray-800">How it works</h4>
+          <div className="space-y-4">
+            <div className="flex items-start space-x-3">
+              <div className="bg-purple-100 p-2 rounded-full mt-1">
+                <span className="text-purple-600 font-bold text-sm">1</span>
+              </div>
+              <div>
+                <p className="font-medium text-gray-800">Invite a friend</p>
+                <p className="text-sm text-gray-600">
+                  Share your code using the Share button.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start space-x-3">
+              <div className="bg-purple-100 p-2 rounded-full mt-1">
+                <span className="text-purple-600 font-bold text-sm">2</span>
+              </div>
+              <div>
+                <p className="font-medium text-gray-800">Friend signs up</p>
+                <p className="text-sm text-gray-600">
+                  They enter your code during signup or in settings.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start space-x-3">
+              <div className="bg-purple-100 p-2 rounded-full mt-1">
+                <span className="text-purple-600 font-bold text-sm">3</span>
+              </div>
+              <div>
+                <p className="font-medium text-gray-800">Both get rewards</p>
+                <p className="text-sm text-gray-600">
+                  Credits are added after successful first purchase.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Buttons */}
+        <div className="mt-6 flex flex-col sm:flex-row justify-center sm:space-x-3 space-y-3 sm:space-y-0">
+          <button
+            onClick={handleCopy}
+            className="bg-white border border-gray-200 rounded-lg px-5 py-3 shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center space-x-2"
+          >
+            {copied ? (
+              <FaCheckCircle className="text-green-500" />
+            ) : (
+              <FaClipboard className="text-gray-600" />
+            )}
+            <span className="text-sm font-medium">Copy Code</span>
+          </button>
+          <button
+            onClick={handleShare}
+            className="bg-purple-600 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-purple-700 transition-colors"
+          >
+            <FaShareAlt className="text-sm" />
+            <span>Share</span>
+          </button>
+        </div>
+      </div>
+    </>
   );
 };
 

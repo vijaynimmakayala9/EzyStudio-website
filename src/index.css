@@ -13,3 +13,10 @@
   animation: underlineSlide 0.8s forwards;
 }
 
+html, body {
+  overflow-x: hidden;
+}
+
+.header-nav {
+  width: 100%;
+}

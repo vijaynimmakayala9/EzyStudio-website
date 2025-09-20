@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { FiSearch } from "react-icons/fi";
+import Navbar from "./Navbar";
 
 const CategoryPoster = () => {
   const [postersByCategory, setPostersByCategory] = useState({});
@@ -46,7 +47,9 @@ const CategoryPoster = () => {
   );
 
   return (
-    <div className="p-4">
+    <>
+    <Navbar/>
+    <div className="p-4 mb-5">
       {/* Heading + Search */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-6">
         <h1 className="text-2xl font-bold mb-4 md:mb-0">Categories</h1>
@@ -103,6 +106,7 @@ const CategoryPoster = () => {
         </>
       )}
     </div>
+    </>
   );
 };
 

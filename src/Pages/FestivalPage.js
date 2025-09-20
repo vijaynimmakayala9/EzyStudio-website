@@ -85,8 +85,8 @@ const FestivalPage = () => {
         key={d.toString()}
         onClick={() => setSelectedDate(d)}
         style={{
-          minWidth: 80,
-          height: 95,
+          minWidth: 70,
+          height: 90,
           borderRadius: 12,
           display: "flex",
           flexDirection: "column",
@@ -100,6 +100,7 @@ const FestivalPage = () => {
           background: isSelected ? "#2E1EA8" : "#ffffff",
           color: isSelected ? "#fff" : "#111827",
           border: "1px solid rgba(0,0,0,0.04)",
+          flexShrink: 0, // ✅ Prevent shrinking on mobile
         }}
       >
         <div style={{ fontSize: 16, fontWeight: 700 }}>
@@ -111,92 +112,138 @@ const FestivalPage = () => {
   };
 
   return (
-    <div style={{ padding: 20, maxWidth: 1100, margin: "0 auto" }}>
-      <h3 style={{ marginBottom: 4, fontWeight: 700 }}>Upcoming Festivals</h3>
-      <p style={{ marginTop: 0, marginBottom: 18, color: "#6b7280" }}>
-        Never miss a celebration
-      </p>
+    <div className="festival-container">
+      <h3 className="festival-title">Upcoming Festivals</h3>
+      <p className="festival-subtitle">Never miss a celebration</p>
 
       {/* Date selector */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+      <div className="festival-date-row">
         {dateList.map((d) => renderDateCard(d))}
       </div>
 
       {/* Festival posters */}
-      <div style={{ minHeight: 260 }}>
+      <div className="festival-grid">
         {loading ? (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: 200,
-            }}
-          >
+          <div className="festival-loading">
             <Spinner animation="border" />
           </div>
         ) : error ? (
-          <div
-            style={{
-              padding: 20,
-              borderRadius: 12,
-              background: "#fff2f0",
-              color: "#9b2c2c",
-            }}
-          >
-            {error}
-          </div>
+          <div className="festival-error">{error}</div>
         ) : festivals.length === 0 ? (
-          <div
-            style={{
-              background: "#fff",
-              borderRadius: 14,
-              padding: 30,
-              boxShadow: "0 6px 18px rgba(15,23,42,0.06)",
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
-              No festivals found
-            </div>
-            <div style={{ color: "#6b7280" }}>Try selecting a different date</div>
+          <div className="festival-empty">
+            <div className="festival-empty-title">No festivals found</div>
+            <div className="festival-empty-sub">Try selecting a different date</div>
           </div>
         ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-              gap: 15,
-            }}
-          >
-            {festivals.map((f) => (
-              <div
-                key={f._id || Math.random()}
-                style={{
-                  borderRadius: 10,
-                  overflow: "hidden",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                }}
-              >
-                <img
-                  src={
-                    f.posterImage?.url ||
-                    f.designData?.bgImage?.url ||
-                    (f.images && f.images[0])
-                  }
-                  alt="festival-poster"
-                  style={{
-                    width: "100%",
-                    height: "220px",
-                    objectFit: "cover",
-                    display: "block",
-                  }}
-                />
-              </div>
-            ))}
-          </div>
+          festivals.map((f) => (
+            <div key={f._id || Math.random()} className="festival-card">
+              <img
+                src={
+                  f.posterImage?.url ||
+                  f.designData?.bgImage?.url ||
+                  (f.images && f.images[0])
+                }
+                alt="festival-poster"
+                className="festival-img"
+              />
+            </div>
+          ))
         )}
       </div>
+
+      {/* ✅ Add responsive CSS */}
+      <style>{`
+        .festival-container {
+          padding: 16px;
+          max-width: 100%;
+          margin: 0 auto;
+        }
+        .festival-title {
+          margin-bottom: 4px;
+          font-weight: 700;
+          font-size: 20px;
+        }
+        .festival-subtitle {
+          margin: 0 0 18px;
+          color: #6b7280;
+          font-size: 14px;
+        }
+        .festival-date-row {
+          display: flex;
+          gap: 12px;
+          margin-bottom: 20px;
+          overflow-x: auto;
+          scrollbar-width: none; /* Firefox */
+        }
+        .festival-date-row::-webkit-scrollbar {
+          display: none; /* Chrome/Safari */
+        }
+        .festival-grid {
+          min-height: 260px;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 15px;
+        }
+        .festival-card {
+          border-radius: 10px;
+          overflow: hidden;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .festival-img {
+          width: 100%;
+          height: 200px;
+          object-fit: cover;
+          display: block;
+        }
+        .festival-loading {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 200px;
+        }
+        .festival-error {
+          padding: 20px;
+          border-radius: 12px;
+          background: #fff2f0;
+          color: #9b2c2c;
+        }
+        .festival-empty {
+          background: #fff;
+          border-radius: 14px;
+          padding: 30px;
+          box-shadow: 0 6px 18px rgba(15,23,42,0.06);
+          text-align: center;
+        }
+        .festival-empty-title {
+          font-size: 18px;
+          font-weight: 700;
+          margin-bottom: 8px;
+        }
+        .festival-empty-sub {
+          color: #6b7280;
+        }
+
+        /* ✅ Responsive tweaks */
+        @media (max-width: 768px) {
+          .festival-title {
+            font-size: 18px;
+          }
+          .festival-img {
+            height: 160px;
+          }
+        }
+        @media (max-width: 480px) {
+          .festival-title {
+            font-size: 16px;
+          }
+          .festival-subtitle {
+            font-size: 12px;
+          }
+          .festival-img {
+            height: 140px;
+          }
+        }
+      `}</style>
     </div>
   );
 };

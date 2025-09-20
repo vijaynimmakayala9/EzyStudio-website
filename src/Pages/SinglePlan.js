@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
-import { v4 as uuidv4 } from 'uuid';
+import { FaCheck, FaCreditCard, FaLock, FaArrowRight } from "react-icons/fa";
+import Navbar from "./Navbar";
 
 const SinglePlan = () => {
   const { id } = useParams();
@@ -37,7 +38,7 @@ const SinglePlan = () => {
       console.error("Failed to load Razorpay script");
       setResponseMessage("Failed to load payment gateway. Please refresh the page.");
     };
-    
+
     document.body.appendChild(script);
 
     return () => {
@@ -51,6 +52,7 @@ const SinglePlan = () => {
   useEffect(() => {
     const fetchPlan = async () => {
       try {
+        console.log(id)
         const response = await axios.get(`http://194.164.148.244:4061/api/plans/singleplan/${id}`);
         if (response.data && response.data.plan) {
           setPlan(response.data.plan);
@@ -97,17 +99,17 @@ const SinglePlan = () => {
           // Send payment verification to your backend
           try {
             setResponseMessage("Verifying payment...");
-            
+
             const verificationResponse = await axios.post("http://194.164.148.244:4061/api/payment/payWithRazorpay", {
               userId: user._id,
               planId: plan._id,
               transactionId: response.razorpay_payment_id
             });
-            
+
             if (verificationResponse.data.success) {
               setResponseMessage(`Payment successful! ${verificationResponse.data.message}`);
               // Update user data in localStorage if needed
-              
+
               // Redirect or show success message
             } else {
               setResponseMessage(`Payment failed: ${verificationResponse.data.message}`);
@@ -127,17 +129,17 @@ const SinglePlan = () => {
           userId: user._id
         },
         theme: {
-          color: "#F37254"
+          color: "#4f46e5"
         }
       };
 
       const razorpayInstance = new window.Razorpay(options);
-      
+
       razorpayInstance.on('payment.failed', function (response) {
         console.error("Payment failed:", response.error);
         setResponseMessage(`Payment failed: ${response.error.reason || "Unknown error"}`);
       });
-      
+
       razorpayInstance.open();
     } catch (error) {
       console.error("Error initiating payment", error);
@@ -146,11 +148,19 @@ const SinglePlan = () => {
   };
 
   if (isLoading) {
-    return <div className="p-6 text-center">Loading plan details...</div>;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center">Loading plan details...</div>
+      </div>
+    );
   }
 
   if (!plan) {
-    return <div className="p-6 text-center">Plan not found.</div>;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center">Plan not found.</div>
+      </div>
+    );
   }
 
   // Calculate display price (same logic as backend)
@@ -160,47 +170,104 @@ const SinglePlan = () => {
   }
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-md max-w-md mx-auto mt-8">
-      <h2 className="text-2xl font-bold mb-4 text-center">{plan.name}</h2>
-      <div className="mb-4">
-        <p className="text-gray-600 line-through">Original Price: ₹{plan.originalPrice}</p>
-        <p className="text-xl font-semibold text-green-600">Offer Price: ₹{displayPrice}</p>
-        {user && user.referredBy && displayPrice < (plan.offerPrice ?? plan.originalPrice) && (
-          <p className="text-sm text-blue-600">₹100 discount applied from referral!</p>
-        )}
-        <p className="text-gray-600">Discount: {plan.discountPercentage}% off</p>
-        <p className="text-gray-600">Duration: {plan.duration}</p>
-      </div>
-      
-      <div className="mb-4">
-        <p className="font-semibold">Features:</p>
-        <ul className="list-disc list-inside">
-          {plan.features.map((feature, index) => (
-            <li key={index} className="text-gray-700">{feature}</li>
-          ))}
-        </ul>
+    <>
+    <Navbar/>
+    <div className="min-h-screen bg-gray-50 py-8 px-4 mb-5">
+      <div className="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden">
+        {/* Plan Header */}
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white text-center">
+          <h1 className="text-2xl font-bold mb-2">{plan.name}</h1>
+
+          {/* Price Section */}
+          <div className="flex items-baseline justify-center mt-4">
+            {plan.originalPrice && plan.originalPrice > displayPrice && (
+              <span className="text-lg line-through opacity-75 mr-2">
+                ₹{plan.originalPrice}
+              </span>
+            )}
+            <span className="text-3xl font-bold">₹{displayPrice}</span>
+            <span className="ml-2 text-sm opacity-90">/{plan.duration}</span>
+          </div>
+
+          {/* Referral Discount Info */}
+          {user && user.referredBy && displayPrice < (plan.offerPrice ?? plan.originalPrice) && (
+            <div className="mt-2 text-sm bg-white bg-opacity-20 inline-block px-2 py-1 rounded-full">
+              ₹100 discount applied from referral!
+            </div>
+          )}
+
+          {/* ✅ Savings Section */}
+          {plan.originalPrice && plan.offerPrice && plan.originalPrice > plan.offerPrice && (
+            <div className="mt-3 text-sm font-medium bg-white text-indigo-700 px-3 py-1 rounded-full inline-block">
+              🎉 You Save ₹{plan.originalPrice - plan.offerPrice} ({plan.discountPercentage}% OFF)
+            </div>
+          )}
+        </div>
+
+
+        {/* Plan Features */}
+        <div className="p-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Plan Features</h2>
+          <ul className="space-y-3">
+            {plan.features.map((feature, index) => (
+              <li key={index} className="flex items-start">
+                <FaCheck className="text-green-500 mt-1 mr-3 flex-shrink-0" />
+                <span className="text-gray-700">{feature}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="border-t border-gray-200"></div>
+
+        {/* Payment Method */}
+        <div className="p-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Payment Method</h2>
+          <div className="bg-blue-50 rounded-lg p-4 mb-4">
+            <div className="flex items-center">
+              <FaCreditCard className="text-blue-600 mr-3" />
+              <div>
+                <h3 className="font-medium text-blue-800">Digital Payment</h3>
+                <p className="text-sm text-blue-600">Secure payment via UPI, Cards & More</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center text-sm text-gray-500 mb-4">
+            <FaLock className="mr-2" />
+            <span>Your payment information is secure and encrypted</span>
+          </div>
+        </div>
+
+        {/* Subscribe Button */}
+        <div className="px-6 pb-6">
+          <button
+            onClick={handlePurchase}
+            disabled={!razorpayLoaded || !user}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 px-6 rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+          >
+            {!user ? "Please Login to Purchase" : razorpayLoaded ? (
+              <>
+                <span>Subscribe Now</span>
+                <FaArrowRight className="ml-2" />
+              </>
+            ) : (
+              "Loading Payment..."
+            )}
+          </button>
+        </div>
       </div>
 
-      <div className="mt-6 text-center">
-        <button
-          onClick={handlePurchase}
-          disabled={!razorpayLoaded || !user}
-          className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-8 rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
-        >
-          {!user ? "Please Login" : razorpayLoaded ? "Purchase Plan" : "Loading Payment..."}
-        </button>
-      </div>
-
+      {/* Response Message */}
       {responseMessage && (
-        <div className={`mt-4 p-3 rounded text-center ${
-          responseMessage.includes("successful") ? "bg-green-100 text-green-700" : 
-          responseMessage.includes("Error") || responseMessage.includes("failed") ? "bg-red-100 text-red-700" : 
-          "bg-blue-100 text-blue-700"
-        }`}>
+        <div className={`max-w-md mx-auto mt-4 p-4 rounded-lg text-center ${responseMessage.includes("successful") ? "bg-green-100 text-green-700 border border-green-200" :
+            responseMessage.includes("Error") || responseMessage.includes("failed") ? "bg-red-100 text-red-700 border border-red-200" :
+              "bg-blue-100 text-blue-700 border border-blue-200"
+          }`}>
           {responseMessage}
         </div>
       )}
     </div>
+    </>
   );
 };
 

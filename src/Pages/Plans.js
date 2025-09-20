@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom"; // Updated import for v6+
+import { useNavigate } from "react-router-dom";
+import { MdOutlineStarPurple500 } from "react-icons/md"; // ⭐ purple star icon
 
 const Plans = () => {
   const [plans, setPlans] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Fetch all plans when the component mounts
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const response = await axios.get("http://194.164.148.244:4061/api/plans/getallplan");
+        const response = await axios.get(
+          "http://194.164.148.244:4061/api/plans/getallplan"
+        );
         if (response.data && response.data.plans) {
           setPlans(response.data.plans);
-          setIsModalOpen(true); // Automatically open the modal when plans are fetched
+          setIsModalOpen(true);
         }
       } catch (error) {
         console.error("Error fetching plans", error);
@@ -21,53 +23,88 @@ const Plans = () => {
     };
 
     fetchPlans();
-  }, []); // Empty dependency array ensures this runs only once when the component mounts
+  }, []);
 
-  // Using useNavigate instead of useHistory
   const navigate = useNavigate();
   const handlePlanClick = (planId) => {
-    navigate(`/singleplan/${planId}`); // Use navigate to redirect to the single plan page
+    navigate(`/singleplan/${planId}`);
   };
 
-  // Close the modal
   const closeModal = () => {
     setIsModalOpen(false);
   };
 
   return (
     <>
-      {/* Modal for displaying all plans */}
       {isModalOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center"
-          onClick={closeModal} // Close the modal when clicking outside
+          className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 px-3"
+          onClick={closeModal}
         >
           <div
-            className="bg-white p-6 rounded-lg w-96 overflow-y-auto relative"
-            onClick={(e) => e.stopPropagation()} // Prevent modal from closing when clicked inside
+            className="bg-white rounded-lg w-full max-w-md relative overflow-y-auto max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
           >
-            {/* Close button (cut button) */}
-            <button
-              onClick={closeModal}
-              className="absolute top-2 right-2 text-gray-500 text-2xl"
-            >
-              &#10005; {/* Close button (×) */}
-            </button>
+            {/* Header */}
+            <div className="bg-gradient-to-r from-purple-500 to-indigo-500 p-4 rounded-t-lg flex justify-between items-center">
+              <div className="flex items-center space-x-2">
+                <span className="bg-white/20 p-2 rounded-md">
+                  <MdOutlineStarPurple500 className="text-white text-xl" />
+                </span>
+                <h2 className="text-white text-lg font-semibold">
+                  Choose Your Plan
+                </h2>
+              </div>
 
-            <h2 className="text-xl font-semibold mb-4">Available Plans</h2>
+              <button
+                onClick={closeModal}
+                className="text-white text-2xl font-bold"
+              >
+                ×
+              </button>
+            </div>
 
-            {/* Display Plans */}
-            <div className="grid grid-cols-1 gap-4">
+            {/* Body */}
+            <div className="p-5 space-y-4">
               {plans.map((plan) => (
                 <div
                   key={plan._id}
-                  className="bg-gray-100 p-4 rounded-lg shadow-md cursor-pointer hover:bg-gray-200"
-                  onClick={() => handlePlanClick(plan._id)}
+                  className="bg-purple-50 p-4 rounded-lg shadow-md"
                 >
-                  <h3 className="font-semibold text-lg">{plan.name}</h3>
-                  <p>Price: ₹{plan.offerPrice}</p>
-                  <p>Duration: {plan.duration}</p>
-                  <p>Discount: {plan.discountPercentage}%</p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold">{plan.name}</h3>
+                      <p className="text-sm text-gray-600">{plan.duration}</p>
+                    </div>
+                    <p className="text-purple-600 text-2xl font-bold">
+                      ₹{plan.offerPrice}{" "}
+                      {plan.originalPrice && (
+                        <span className="line-through text-gray-400 text-base ml-1">
+                          ₹{plan.originalPrice}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+
+                  {/* What's included */}
+                  <div className="mt-3">
+                    <p className="text-sm font-medium">What's included:</p>
+                    <ul className="text-sm text-gray-700 mt-1 list-disc pl-5 space-y-1">
+                      {plan.features && plan.features.length > 0 ? (
+                        plan.features.map((f, i) => <li key={i}>{f}</li>)
+                      ) : (
+                        <li>Full Access</li>
+                      )}
+                    </ul>
+                  </div>
+
+                  {/* Select Button */}
+                  <button
+                    onClick={() => handlePlanClick(plan._id)}
+                    className="w-full mt-4 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition"
+                  >
+                    Select Plan
+                  </button>
                 </div>
               ))}
             </div>

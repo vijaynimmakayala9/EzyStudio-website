@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
-import "./SinglePoster.css";
 
 const SinglePoster = () => {
   const { posterId } = useParams();
@@ -14,7 +13,9 @@ const SinglePoster = () => {
   const [isResizing, setIsResizing] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [resizeDirection, setResizeDirection] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const canvasRef = useRef(null);
+  const canvasContainerRef = useRef(null);
 
   useEffect(() => {
     const fetchPoster = async () => {
@@ -277,16 +278,28 @@ const SinglePoster = () => {
     }
   };
 
-  const handleCanvasClick = (e) => {
-    if (!poster) return;
-    
+  const getCanvasCoordinates = (clientX, clientY) => {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
+    };
+  };
+
+  const handleCanvasClick = (e) => {
+    if (!poster) return;
+    
+    // Handle both mouse and touch events
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    
+    if (clientX === undefined || clientY === undefined) return;
+    
+    const { x, y } = getCanvasCoordinates(clientX, clientY);
     
     const { textSettings, textStyles, textVisibility, overlaySettings } = poster.designData;
     
@@ -393,13 +406,17 @@ const SinglePoster = () => {
   const handleMouseDown = (e) => {
     if (!poster) return;
     
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+    // Prevent default for touch events to avoid scrolling
+    if (e.type === 'touchstart') {
+      e.preventDefault();
+    }
     
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    
+    if (clientX === undefined || clientY === undefined) return;
+    
+    const { x, y } = getCanvasCoordinates(clientX, clientY);
     
     if (selectedText) {
       const textSettings = poster.designData.textSettings;
@@ -437,13 +454,12 @@ const SinglePoster = () => {
   const handleMouseMove = (e) => {
     if (!poster || (!isDragging && !isResizing)) return;
     
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
     
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
+    if (clientX === undefined || clientY === undefined) return;
+    
+    const { x, y } = getCanvasCoordinates(clientX, clientY);
     
     if (isDragging && selectedText) {
       const newX = x - dragOffset.x;
@@ -529,73 +545,95 @@ const SinglePoster = () => {
   };
 
   if (loading) {
-    return <div className="loading">Loading poster...</div>;
+    return <div className="flex justify-center items-center h-screen text-gray-600 text-lg">Loading poster...</div>;
   }
 
   if (error) {
-    return <div className="error">{error}</div>;
+    return <div className="flex justify-center items-center h-screen text-red-600 text-lg">{error}</div>;
   }
 
   if (!poster) {
-    return <div className="error">No poster data available</div>;
+    return <div className="flex justify-center items-center h-screen text-red-600 text-lg">No poster data available</div>;
   }
 
   return (
-    <div className="canvas-poster-editor">
-      <h2>Poster Editor - {poster.title}</h2>
+    <div className="p-4 font-sans max-w-7xl mx-auto">
+      <div className="flex justify-between items-center mb-5">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-800">Poster Editor - {poster.title}</h2>
+        <button 
+          className="lg:hidden bg-blue-500 text-white px-4 py-2 rounded-md"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+        >
+          {sidebarOpen ? 'Hide Editor' : 'Show Editor'}
+        </button>
+      </div>
       
-      <div className="editor-container">
-        <div className="canvas-container">
-          <canvas 
-            ref={canvasRef} 
-            className="poster-canvas"
-            onClick={handleCanvasClick}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-          ></canvas>
-          <div className="canvas-instructions">
+      <div className="flex flex-col lg:flex-row gap-5 mt-5">
+        <div className="flex-1 border border-gray-300 rounded-lg p-3 bg-gray-50 shadow-md" ref={canvasContainerRef}>
+          <div className="relative w-full pb-[141.42%]"> {/* Aspect ratio container for A4 (1:1.414) */}
+            <canvas 
+              ref={canvasRef} 
+              className="absolute top-0 left-0 w-full h-full bg-white shadow-md cursor-pointer touch-none"
+              onClick={handleCanvasClick}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onTouchStart={handleMouseDown}
+              onTouchMove={handleMouseMove}
+              onTouchEnd={handleMouseUp}
+            ></canvas>
+          </div>
+          <div className="mt-3 text-sm text-gray-600 text-center">
             Click on text or image to select, then drag to reposition. 
             Use corners to resize images.
           </div>
         </div>
         
-        <div className="editor-sidebar">
-          <h3>Edit Selection</h3>
+        <div className={`w-full lg:w-80 bg-white border border-gray-300 rounded-lg p-4 shadow-md transition-all duration-300 ${sidebarOpen ? 'block' : 'hidden lg:block'}`}>
+          <h3 className="text-lg font-semibold mt-0 pb-3 border-b border-gray-200">Edit Selection</h3>
           
           {selectedText && (
-            <div className="text-editor">
-              <div className="form-group">
-                <label>{selectedText.charAt(0).toUpperCase() + selectedText.slice(1)}</label>
+            <div className="mt-4">
+              <div className="mb-4">
+                <label className="block mb-1 font-medium text-gray-700">
+                  {selectedText.charAt(0).toUpperCase() + selectedText.slice(1)}
+                </label>
                 <input
                   type="text"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={poster[selectedText] || ''}
                   onChange={(e) => handleTextChange(selectedText, e.target.value)}
                 />
               </div>
               
-              <div className="form-group">
-                <label>Font Size</label>
+              <div className="mb-4">
+                <label className="block mb-1 font-medium text-gray-700">Font Size</label>
                 <input
                   type="number"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={poster.designData.textStyles[selectedText].fontSize}
                   onChange={(e) => handleStyleChange(selectedText, 'fontSize', parseInt(e.target.value))}
                 />
               </div>
               
-              <div className="form-group">
-                <label>Color</label>
-                <input
-                  type="color"
-                  value={poster.designData.textStyles[selectedText].color}
-                  onChange={(e) => handleStyleChange(selectedText, 'color', e.target.value)}
-                />
+              <div className="mb-4">
+                <label className="block mb-1 font-medium text-gray-700">Color</label>
+                <div className="flex items-center">
+                  <input
+                    type="color"
+                    className="w-10 h-10 border border-gray-300 rounded cursor-pointer"
+                    value={poster.designData.textStyles[selectedText].color}
+                    onChange={(e) => handleStyleChange(selectedText, 'color', e.target.value)}
+                  />
+                  <span className="ml-2 text-gray-600">{poster.designData.textStyles[selectedText].color}</span>
+                </div>
               </div>
               
-              <div className="form-group">
-                <label>Font Family</label>
+              <div className="mb-4">
+                <label className="block mb-1 font-medium text-gray-700">Font Family</label>
                 <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={poster.designData.textStyles[selectedText].fontFamily}
                   onChange={(e) => handleStyleChange(selectedText, 'fontFamily', e.target.value)}
                 >
@@ -608,9 +646,10 @@ const SinglePoster = () => {
                 </select>
               </div>
               
-              <div className="form-group">
-                <label>Font Weight</label>
+              <div className="mb-4">
+                <label className="block mb-1 font-medium text-gray-700">Font Weight</label>
                 <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={poster.designData.textStyles[selectedText].fontWeight}
                   onChange={(e) => handleStyleChange(selectedText, 'fontWeight', e.target.value)}
                 >
@@ -620,9 +659,10 @@ const SinglePoster = () => {
                 </select>
               </div>
               
-              <div className="form-group">
-                <label>Font Style</label>
+              <div className="mb-4">
+                <label className="block mb-1 font-medium text-gray-700">Font Style</label>
                 <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={poster.designData.textStyles[selectedText].fontStyle}
                   onChange={(e) => handleStyleChange(selectedText, 'fontStyle', e.target.value)}
                 >
@@ -635,40 +675,44 @@ const SinglePoster = () => {
           )}
           
           {selectedOverlay !== null && (
-            <div className="overlay-editor">
-              <h4>Overlay Image Properties</h4>
+            <div className="mt-4">
+              <h4 className="font-medium text-gray-800 mb-3">Overlay Image Properties</h4>
               
-              <div className="form-group">
-                <label>Position X</label>
+              <div className="mb-4">
+                <label className="block mb-1 font-medium text-gray-700">Position X</label>
                 <input
                   type="number"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={poster.designData.overlaySettings.overlays[selectedOverlay].x}
                   onChange={(e) => handleOverlayChange('x', e.target.value)}
                 />
               </div>
               
-              <div className="form-group">
-                <label>Position Y</label>
+              <div className="mb-4">
+                <label className="block mb-1 font-medium text-gray-700">Position Y</label>
                 <input
                   type="number"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={poster.designData.overlaySettings.overlays[selectedOverlay].y}
                   onChange={(e) => handleOverlayChange('y', e.target.value)}
                 />
               </div>
               
-              <div className="form-group">
-                <label>Width</label>
+              <div className="mb-4">
+                <label className="block mb-1 font-medium text-gray-700">Width</label>
                 <input
                   type="number"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={poster.designData.overlaySettings.overlays[selectedOverlay].width}
                   onChange={(e) => handleOverlayChange('width', e.target.value)}
                 />
               </div>
               
-              <div className="form-group">
-                <label>Height</label>
+              <div className="mb-4">
+                <label className="block mb-1 font-medium text-gray-700">Height</label>
                 <input
                   type="number"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={poster.designData.overlaySettings.overlays[selectedOverlay].height}
                   onChange={(e) => handleOverlayChange('height', e.target.value)}
                 />
@@ -677,7 +721,7 @@ const SinglePoster = () => {
           )}
           
           {!selectedText && selectedOverlay === null && (
-            <div className="no-selection">
+            <div className="text-center text-gray-600 py-5">
               <p>Select a text element or image on the canvas to edit its properties</p>
             </div>
           )}

@@ -17,7 +17,7 @@ const HomePage = () => {
         <Navbar />
       </div>
 
-      <div className="pt-[90px] bg-gray-50 flex-1">
+      <div className="pt-[90px] bg-gray-50 flex-1 mb-5">
         {/* Banner */}
         <ProfileHeader />
         <BannerCarousel />
@@ -30,9 +30,9 @@ const HomePage = () => {
       </div>
 
       {/* Footer */}
-      <div className="mt-auto">
+      {/* <div className="mt-auto">
         <Footer />
-      </div>
+      </div> */}
 
       {/* Plans Modal Component */}
       <Plans />

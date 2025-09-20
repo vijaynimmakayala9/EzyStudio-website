@@ -146,12 +146,18 @@ const StoryPage = () => {
       {/* Stories Row */}
       <div
         className="d-flex align-items-center mb-4"
-        style={{ overflowX: "auto", gap: "15px" }}
+        style={{
+          overflowX: "auto",
+          whiteSpace: "nowrap",  // ✅ Prevent wrapping
+          gap: "15px",
+          paddingBottom: "10px",
+          scrollbarWidth: "thin", // Firefox
+        }}
       >
         {/* Your Story (Upload) */}
         <div
-          className="d-flex flex-column align-items-center"
-          style={{ cursor: "pointer" }}
+          className="d-inline-flex flex-column align-items-center"
+          style={{ cursor: "pointer", minWidth: "70px" }}
           onClick={() => setShowUploadModal(true)}
         >
           <div
@@ -165,6 +171,7 @@ const StoryPage = () => {
               alignItems: "center",
               fontSize: "30px",
               color: "#888",
+              flexShrink: 0, // ✅ Prevent shrinking in scroll
             }}
           >
             +
@@ -176,8 +183,8 @@ const StoryPage = () => {
         {stories.map((story) => (
           <div
             key={story._id}
-            className="d-flex flex-column align-items-center"
-            style={{ cursor: "pointer" }}
+            className="d-inline-flex flex-column align-items-center"
+            style={{ cursor: "pointer", minWidth: "70px" }}
             onClick={() => handleOpenStory(story)}
           >
             <img
@@ -192,12 +199,16 @@ const StoryPage = () => {
                   ? "3px solid gray"
                   : "3px solid green",
                 padding: "2px",
+                flexShrink: 0,
               }}
             />
-            <p className="mt-2 small">{story.caption || "Story"}</p>
+            <p className="mt-2 small text-truncate" style={{ maxWidth: "70px" }}>
+              {story.caption || "Story"}
+            </p>
           </div>
         ))}
       </div>
+
 
       {/* Upload Story Modal */}
       <Modal

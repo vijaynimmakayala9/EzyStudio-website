@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import Navbar from "./Navbar";
 
 const CategoryWisePoster = () => {
   const [postersByCategory, setPostersByCategory] = useState({});
@@ -49,6 +50,7 @@ const CategoryWisePoster = () => {
         </div>
       ) : (
         <>
+        
           {Object.entries(postersByCategory).map(([category, posters]) => (
             <div key={category} className="mb-8">
               {/* Category Title */}
