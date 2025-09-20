@@ -35,6 +35,12 @@ import Invoice from "./Pages/Invoice";
 import ContactUs from "./Pages/ContactUs";
 import SinglePlan from "./Pages/SinglePlan";
 import SinglePoster from "./Pages/SinglePoster";
+import CreativeStudio from "./Pages/Create";
+import CustomPosterEditor from "./Pages/CustomPoster";
+import Logo from "./Pages/Logo";
+import BackgroundRemover from "./Pages/BackgroundRemoval";
+import BusinessCardManager from "./Pages/BussinessCardManager";
+import ChatComponent from "./Pages/ChatPage";
 
 function App() {
   return (
@@ -57,13 +63,13 @@ function App() {
         <Route path="/diagnostics" element={<DiagnosticsPage />} />
         <Route path="/wallet" element={<WalletPage />} />
         <Route path="/medicalrecord" element={<MedicalRecordsPage />} />
-        <Route path="/chat" element={<ChatPage />} />
+        
         <Route path="/family" element={<FamilyPage />} />
         <Route path="/address" element={<AddressPage />} />
         <Route path="/hra-category" element={<HraPage />} />
         <Route path="/hra-questions" element={<HraQuestionsPage />} />
         <Route path="/notification" element={<NotificationsPage />} />
-        
+
         <Route path="/help" element={<HelpPage />} />
         <Route path="/story" element={<StoryPage />} />
         <Route path="/categories" element={<CategoryPoster />} />
@@ -78,6 +84,13 @@ function App() {
         <Route path="/singleplan/:id" element={<SinglePlan />} />
         <Route path="/posters/:posterId" element={<SinglePoster />} />
         <Route path="/delete-account" element={<DeleteAccountPage />} />
+
+        <Route path="/create" element={<CreativeStudio />} />
+        <Route path="/custom" element={<CustomPosterEditor />} />
+        <Route path="/logo" element={<Logo />} />
+        <Route path="/backgroundremoval" element={<BackgroundRemover />} />
+        <Route path="/businesscard" element={<BusinessCardManager />} />
+        <Route path="/chat" element={<ChatComponent />} />
       </Routes>
     </Router>
   );

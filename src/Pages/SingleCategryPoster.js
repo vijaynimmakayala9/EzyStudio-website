@@ -1,6 +1,6 @@
 // src/components/SingleCategoryPoster.js
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import Navbar from "./Navbar";
 
@@ -9,6 +9,8 @@ const SingleCategoryPoster = () => {
   const [posters, setPosters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchCategoryPosters = async () => {
@@ -58,6 +60,7 @@ const SingleCategoryPoster = () => {
               <div
                 key={poster._id}
                 className="rounded-xl shadow-md overflow-hidden border hover:scale-105 transition-transform duration-200"
+                onClick={() => navigate(`/posters/${poster._id}`)}
               >
                 <img
                   src={poster.posterImage?.url || "/placeholder.png"}

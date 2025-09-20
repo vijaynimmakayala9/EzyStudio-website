@@ -99,7 +99,7 @@ const StoryPage = () => {
       await axios.delete(
         `http://194.164.148.244:4061/api/users/deletestory/${userId}/${storyId}`,
         {
-          data: { mediaUrl }, // ✅ Backend ke hisaab se body bhejna
+          data: { mediaUrl },
         }
       );
 
@@ -139,76 +139,95 @@ const StoryPage = () => {
     );
   }
 
+  // Find user's own story - CORRECTED: use story.user._id
+  const userStory = stories.find(story => story.user._id === userId);
+
   return (
-    <div className="container py-4">
+    <div className="container-fluid py-4">
       <h2 className="mb-3">Stories</h2>
 
       {/* Stories Row */}
       <div
         className="d-flex align-items-center mb-4"
-        style={{
-          overflowX: "auto",
-          whiteSpace: "nowrap",  // ✅ Prevent wrapping
-          gap: "15px",
-          paddingBottom: "10px",
-          scrollbarWidth: "thin", // Firefox
-        }}
+        style={{ overflowX: "auto", gap: "15px" }}
       >
-        {/* Your Story (Upload) */}
-        <div
-          className="d-inline-flex flex-column align-items-center"
-          style={{ cursor: "pointer", minWidth: "70px" }}
-          onClick={() => setShowUploadModal(true)}
-        >
+        {/* User's Story */}
+        {userStory ? (
           <div
-            style={{
-              width: "70px",
-              height: "70px",
-              borderRadius: "50%",
-              border: "2px dashed #888",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              fontSize: "30px",
-              color: "#888",
-              flexShrink: 0, // ✅ Prevent shrinking in scroll
-            }}
-          >
-            +
-          </div>
-          <p className="mt-2 small">Your Story</p>
-        </div>
-
-        {/* All Stories */}
-        {stories.map((story) => (
-          <div
-            key={story._id}
-            className="d-inline-flex flex-column align-items-center"
-            style={{ cursor: "pointer", minWidth: "70px" }}
-            onClick={() => handleOpenStory(story)}
+            className="d-flex flex-column align-items-center"
+            style={{ cursor: "pointer" }}
+            onClick={() => handleOpenStory(userStory)}
           >
             <img
-              src={story.images?.[0]}
+              src={userStory.images?.[0] || userStory.user.profileImage}
               alt="story"
               style={{
                 width: "70px",
                 height: "70px",
                 borderRadius: "50%",
                 objectFit: "cover",
-                border: seenStories.includes(story._id)
+                border: seenStories.includes(userStory._id)
                   ? "3px solid gray"
                   : "3px solid green",
                 padding: "2px",
-                flexShrink: 0,
               }}
             />
-            <p className="mt-2 small text-truncate" style={{ maxWidth: "70px" }}>
-              {story.caption || "Story"}
-            </p>
+            <p className="mt-2 small">Your Story</p>
           </div>
-        ))}
-      </div>
+        ) : (
+          // Upload Story Button (only shown if user has no active story)
+          <div
+            className="d-flex flex-column align-items-center"
+            style={{ cursor: "pointer" }}
+            onClick={() => setShowUploadModal(true)}
+          >
+            <div
+              style={{
+                width: "70px",
+                height: "70px",
+                borderRadius: "50%",
+                border: "2px dashed #888",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                fontSize: "30px",
+                color: "#888",
+              }}
+            >
+              +
+            </div>
+            <p className="mt-2 small">Your Story</p>
+          </div>
+        )}
 
+        {/* Other Users' Stories */}
+        {stories
+          .filter(story => story.user._id !== userId) // CORRECTED: use story.user._id
+          .map((story) => (
+            <div
+              key={story._id}
+              className="d-flex flex-column align-items-center"
+              style={{ cursor: "pointer" }}
+              onClick={() => handleOpenStory(story)}
+            >
+              <img
+                src={story.images?.[0] || story.user.profileImage}
+                alt="story"
+                style={{
+                  width: "70px",
+                  height: "70px",
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  border: seenStories.includes(story._id)
+                    ? "3px solid gray"
+                    : "3px solid green",
+                  padding: "2px",
+                }}
+              />
+              <p className="mt-2 small">{story.user.name}</p>
+            </div>
+          ))}
+      </div>
 
       {/* Upload Story Modal */}
       <Modal
@@ -262,6 +281,7 @@ const StoryPage = () => {
           <>
             <Modal.Header closeButton>
               <Modal.Title>{selectedStory.caption}</Modal.Title>
+              <span className="text-muted">by {selectedStory.user.name}</span>
             </Modal.Header>
 
             <Modal.Body className="text-center">
@@ -273,17 +293,19 @@ const StoryPage = () => {
                     alt="story"
                     style={{ maxWidth: "100%", borderRadius: "10px" }}
                   />
-                  <FiTrash2
-                    size={22}
-                    color="red"
-                    style={{
-                      cursor: "pointer",
-                      position: "absolute",
-                      top: "10px",
-                      right: "10px",
-                    }}
-                    onClick={() => handleDeleteStory(selectedStory._id, img)}
-                  />
+                  {selectedStory.user._id === userId && (
+                    <FiTrash2
+                      size={22}
+                      color="red"
+                      style={{
+                        cursor: "pointer",
+                        position: "absolute",
+                        top: "10px",
+                        right: "10px",
+                      }}
+                      onClick={() => handleDeleteStory(selectedStory._id, img)}
+                    />
+                  )}
                 </div>
               ))}
 
@@ -296,24 +318,21 @@ const StoryPage = () => {
                   >
                     <source src={vid} type="video/mp4" />
                   </video>
-                  <FiTrash2
-                    size={22}
-                    color="red"
-                    style={{
-                      cursor: "pointer",
-                      position: "absolute",
-                      top: "10px",
-                      right: "10px",
-                    }}
-                    onClick={() => handleDeleteStory(selectedStory._id, vid)}
-                  />
+                  {selectedStory.user._id === userId && (
+                    <FiTrash2
+                      size={22}
+                      color="red"
+                      style={{
+                        cursor: "pointer",
+                        position: "absolute",
+                        top: "10px",
+                        right: "10px",
+                      }}
+                      onClick={() => handleDeleteStory(selectedStory._id, vid)}
+                    />
+                  )}
                 </div>
               ))}
-
-              <p className="mt-3 text-muted">
-                Expires on:{" "}
-                {new Date(selectedStory.expired_at).toLocaleString()}
-              </p>
             </Modal.Body>
 
             <Modal.Footer>

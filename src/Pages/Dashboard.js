@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaTools, FaUserCircle, FaHeadset, FaArrowLeft, FaShieldAlt, FaFileContract } from "react-icons/fa";
+import { FaTools, FaUserCircle, FaHeadset, FaArrowLeft, FaShieldAlt, FaFileContract, FaSignOutAlt } from "react-icons/fa";
 import {
   FaUser,
   FaGear,
@@ -12,15 +12,17 @@ import {
   FaCircleQuestion,
   FaEnvelope,
   FaWandMagicSparkles,
-  FaNoteSticky, // ✅ use this instead of FaRegStickyNote
+  FaNoteSticky,
   FaImage,
 } from "react-icons/fa6";
-import Navbar from './Navbar'
+import Navbar from './Navbar';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("Account");
   const [userId, setUserId] = useState("");
   const [userName, setUserName] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [modalText, setModalText] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,29 +32,31 @@ export default function Dashboard() {
     setUserName(name);
   }, []);
 
-  // tools tab items
+  // Tools tab items
   const tools = [
     {
       name: "Background Remover",
       desc: "Remove image backgrounds instantly",
-      route: "/background-remover",
+      route: "/backgroundremoval",
       icon: <FaImage className="text-blue-500" />,
     },
     {
       name: "Caption Generator",
       desc: "Generate engaging captions",
-      route: "/caption-generator",
+      route: "#",
       icon: <FaWandMagicSparkles className="text-green-500" />,
+      comingSoon: true,
     },
     {
       name: "WhatsApp Stickers",
       desc: "Create custom stickers",
-      route: "/stickers",
-      icon: <FaNoteSticky className="text-pink-500" />, // ✅ fixed
+      route: "#",
+      icon: <FaNoteSticky className="text-pink-500" />,
+      comingSoon: true,
     },
   ];
 
-  // account tab items
+  // Account tab items
   const account = [
     {
       name: "My Profile",
@@ -60,12 +64,6 @@ export default function Dashboard() {
       route: "/profile",
       icon: <FaUser className="text-blue-500" />,
     },
-    // {
-    //   name: "Settings",
-    //   desc: "App preferences and configuration",
-    //   route: "/settings",
-    //   icon: <FaGear className="text-gray-500" />,
-    // },
     {
       name: "Refer & Earn",
       desc: "Invite friends and earn rewards",
@@ -87,7 +85,7 @@ export default function Dashboard() {
     {
       name: "Add Business",
       desc: "Register your business profile",
-      route: "#",
+      route: "/businesscard",
       icon: <FaBuilding className="text-indigo-500" />,
     },
     {
@@ -98,7 +96,7 @@ export default function Dashboard() {
     },
   ];
 
-  // support tab items
+  // Support tab items
   const support = [
     {
       name: "Contact Support",
@@ -118,7 +116,6 @@ export default function Dashboard() {
       route: "https://ezystudio.onrender.com/terms-and-conditions",
       icon: <FaFileContract className="text-purple-500" />,
     },
-
   ];
 
   const getItems = () => {
@@ -127,79 +124,135 @@ export default function Dashboard() {
     return account;
   };
 
+  // Handle item click
+  const handleItemClick = (item) => {
+    if (item.comingSoon) {
+      setModalText(`${item.name} is coming soon!`);
+      setShowModal(true);
+    } else if (item.route.startsWith("http")) {
+      window.open(item.route, "_blank", "noopener,noreferrer");
+    } else {
+      navigate(item.route);
+    }
+  };
+
   return (
     <>
-    <Navbar/>
-    <div className="p-4 max-w-md mx-auto mb-5">
-      {/* Header with Back Arrow */}
-      <div className="flex items-center mb-4">
-        <button onClick={() => navigate(-1)} className="mr-3">
-          <FaArrowLeft className="text-xl text-gray-600" />
-        </button>
-        <h1 className="text-xl font-bold">Dashboard</h1>
-      </div>
-
-      {/* Tabs with Icons */}
-      <div className="flex justify-around mb-4">
-        {[
-          { name: "Tools", icon: <FaTools /> },
-          { name: "Account", icon: <FaUserCircle /> },
-          { name: "Support", icon: <FaHeadset /> },
-        ].map((tab) => (
+      <Navbar />
+      <div className="p-4 max-w-md mx-auto mb-5">
+        <div className="flex items-center justify-between mb-4 p-2 bg-gray-100 rounded-lg">
+          {/* Back Button */}
           <button
-            key={tab.name}
-            onClick={() => setActiveTab(tab.name)}
-            className={`flex-1 mx-1 py-2 rounded-md font-medium flex flex-col items-center justify-center gap-1 transition-colors duration-200 ${activeTab === tab.name
-              ? "bg-blue-500 text-white"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+            onClick={() => navigate(-1)}
+            className="flex items-center text-gray-700 hover:text-gray-900"
           >
-            <span className="text-sm">{tab.icon}</span>
-            <span className="text-sm">{tab.name}</span>
+            <FaArrowLeft className="mr-2 text-xl" />
+            
           </button>
 
-        ))}
+          {/* Title */}
+          <h1 className="text-xl font-bold text-center flex-1">
+            Dashboard
+          </h1>
+
+          {/* Logout Button */}
+          <button
+            onClick={() => {
+              localStorage.removeItem("userId"); // Clear user session
+              localStorage.removeItem("userName");
+              navigate("/"); // Redirect to login
+            }}
+            className="flex items-center text-red-600 hover:text-red-800"
+          >
+            <FaSignOutAlt className="mr-2 text-xl" />
+            
+          </button>
+        </div>
+
+        {/* Tabs with Icons */}
+        <div className="flex justify-around mb-4">
+          {[
+            { name: "Tools", icon: <FaTools /> },
+            { name: "Account", icon: <FaUserCircle /> },
+            { name: "Support", icon: <FaHeadset /> },
+          ].map((tab) => (
+            <button
+              key={tab.name}
+              onClick={() => setActiveTab(tab.name)}
+              className={`flex-1 mx-1 py-2 rounded-md font-medium flex flex-col items-center justify-center gap-1 transition-colors duration-200 ${activeTab === tab.name ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+            >
+              <span className="text-sm">{tab.icon}</span>
+              <span className="text-sm">{tab.name}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Blue Card for User */}
+        {activeTab === "Account" && (
+          <div
+            className="bg-blue-500 rounded-xl shadow-md p-4 flex items-center space-x-3 text-white cursor-pointer"
+            onClick={() => navigate("/profile")}
+          >
+            <div className="bg-white rounded-full h-10 w-10 flex items-center justify-center text-blue-500 font-bold">
+              {userName.charAt(0)}
+            </div>
+            <div>
+              <h2 className="font-semibold text-lg">{userName}</h2>
+            </div>
+          </div>
+        )}
+
+        {/* Items List */}
+        <div className="mt-4 space-y-3">
+          {getItems().map((item, i) => (
+            <div
+              key={i}
+              className="rounded-xl shadow-md border p-3 bg-white hover:bg-gray-50 transition cursor-pointer flex items-center gap-3"
+              onClick={() => handleItemClick(item)}
+            >
+              {item.icon}
+              <div>
+                <h2 className="font-semibold text-lg">{item.name}</h2>
+                {item.desc && <p className="text-gray-500 text-sm">{item.desc}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Blue Card for User */}
-      {activeTab === "Account" && (
-        <div
-          className="bg-blue-500 rounded-xl shadow-md p-4 flex items-center space-x-3 text-white cursor-pointer"
-          onClick={() => navigate("/profile")}
-        >
-          <div className="bg-white rounded-full h-10 w-10 flex items-center justify-center text-blue-500 font-bold">
-            {userName.charAt(0)}
-          </div>
-          <div>
-            <h2 className="font-semibold text-lg">{userName}</h2>
+      {/* Coming Soon Modal */}
+      {showModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-blue-900/40 z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-lg border border-white/30 flex flex-col items-center space-y-4 animate-modal-in">
+
+            {/* Optional Info Icon */}
+            <div className="flex justify-center">
+              <svg
+                className="w-12 h-12 text-blue-400"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
+              </svg>
+            </div>
+
+            {/* Modal Text */}
+            <h2 className="text-xl font-bold text-center text-black drop-shadow-md">{modalText}</h2>
+
+            {/* Close Button */}
+            <button
+              onClick={() => setShowModal(false)}
+              className="w-full bg-blue-500 text-white py-3 rounded-xl hover:bg-blue-500/60 transition-colors backdrop-blur-sm shadow-md font-semibold"
+            >
+              Close
+            </button>
           </div>
         </div>
       )}
 
-      {/* Items List */}
-      <div className="mt-4 space-y-3">
-        {getItems().map((item, i) => (
-          <div
-            key={i}
-            className="rounded-xl shadow-md border p-3 bg-white hover:bg-gray-50 transition cursor-pointer flex items-center gap-3"
-            onClick={() => {
-              if (item.route.startsWith("http")) {
-                window.open(item.route, "_blank", "noopener,noreferrer");
-              } else {
-                navigate(item.route);
-              }
-            }}
-          >
-            {item.icon}
-            <div>
-              <h2 className="font-semibold text-lg">{item.name}</h2>
-              {item.desc && <p className="text-gray-500 text-sm">{item.desc}</p>}
-            </div>
-          </div>
-
-        ))}
-      </div>
-    </div>
     </>
   );
 }

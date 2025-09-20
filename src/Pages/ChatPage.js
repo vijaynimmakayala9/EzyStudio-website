@@ -1,426 +1,179 @@
-import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
-import io from 'socket.io-client';
-import Navbar from './Navbar';
+import React, { useState, useRef, useEffect } from "react";
+import { FaPaperPlane, FaArrowLeft } from "react-icons/fa"; 
+import axios from "axios";
 
-// Replace with your actual backend URL
-const SOCKET_URL = 'http://31.97.206.144:4051';
-const socket = io(SOCKET_URL);
+// Gemini API configuration
+const GEMINI_API_KEY = 'AIzaSyCOi06p94fKvs4Qpy_hOZezoZW9QO-qU3o';
+const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+const MODEL = 'gemini-2.0-flash';
 
-const ChatPage = () => {
-  const [doctors, setDoctors] = useState([]);
-  const [selectedDoctor, setSelectedDoctor] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [doctorsLoading, setDoctorsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [doctorId, setDoctorId] = useState(null);
-  const [staffId, setStaffId] = useState(null);
-  const [file, setFile] = useState(null);
+const ChatComponent = ({ onBack }) => {
   const [isTyping, setIsTyping] = useState(false);
-  const [doctorName, setDoctorName] = useState('Doctor');
+  const [chatMessages, setChatMessages] = useState([]);
+  const messageInputRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
-  // Auto-scroll to bottom of chat
+  useEffect(() => {
+    scrollToBottom();
+  }, [chatMessages, isTyping]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  // Fetch the staff ID from localStorage
-  useEffect(() => {
-    const storedStaffId = localStorage.getItem('staffId');
-    if (!storedStaffId) {
-      setError('Staff ID is not available in localStorage.');
-      return;
-    }
-    setStaffId(storedStaffId);
-  }, []);
-
-// Fetch the doctors based on staff's booking
-useEffect(() => {
-  const fetchDoctors = async () => {
-    if (!staffId) return;
+  const processMessageWithGemini = async (newMessageContent) => {
+    const API_URL = `${GEMINI_BASE}/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
     try {
-      const response = await axios.get(
-        `http://31.97.206.144:4051/api/staff/mybookings/${staffId}`
-      );
+      const contents = [];
 
-      console.log('Doctors API Response:', response.data); // Add this for debugging
-
-      if (response.data.success && response.data.bookings.length > 0) {
-        // Extract unique doctors from bookings
-        const uniqueDoctors = response.data.bookings.reduce((acc, booking) => {
-          const doctor = booking.doctorId;
-          
-          // Check if doctor exists and has valid _id
-          if (doctor && doctor._id && !acc.find(d => d._id === doctor._id)) {
-            acc.push(doctor);
-          }
-          return acc;
-        }, []);
-        
-        console.log('Extracted doctors:', uniqueDoctors); // Add this for debugging
-        setDoctors(uniqueDoctors);
-      } else {
-        setError('No doctors found for this staff.');
+      for (let msg of chatMessages) {
+        if (msg.message && msg.message.trim() !== "") {
+          contents.push({
+            role: msg.sender === "User" ? "user" : "model",
+            parts: [{ text: msg.message }]
+          });
+        }
       }
-    } catch (err) {
-      console.error('Error fetching doctors:', err); // Add detailed error logging
-      setError('Error fetching doctors: ' + (err.response?.data?.message || err.message));
+
+      contents.push({
+        role: "user",
+        parts: [{ text: newMessageContent }]
+      });
+
+      const requestBody = {
+        contents: contents,
+        generationConfig: {
+          maxOutputTokens: 1000,
+          temperature: 0.7
+        }
+      };
+
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Gemini API request failed: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+      }
+
+      const responseData = await response.json();
+      const assistantMessage = responseData.candidates[0].content.parts[0].text;
+
+      return {
+        sender: "Allude! Assistant",
+        message: assistantMessage,
+      };
+    } catch (error) {
+      console.error("Gemini API request failed:", error);
+      return {
+        sender: "Allude! Assistant",
+        message: "I'm having trouble processing your request. Please try again later.",
+      };
+    }
+  };
+
+  const handleSendRequest = async () => {
+    const message = messageInputRef.current.value;
+    if (!message) return;
+
+    messageInputRef.current.value = '';
+
+    const userMessage = {
+      sender: "User",
+      message: message,
+    };
+
+    setChatMessages(prev => [...prev, userMessage]);
+    setIsTyping(true);
+
+    try {
+      const response = await processMessageWithGemini(message);
+      if (response) {
+        setChatMessages(prev => [...prev, response]);
+      }
+    } catch (error) {
+      console.error("Error:", error);
     } finally {
-      setDoctorsLoading(false);
+      setIsTyping(false);
     }
-  };
-
-  fetchDoctors();
-}, [staffId]);
-
-  // Select a doctor to chat with
-  const handleSelectDoctor = (doctor) => {
-    setSelectedDoctor(doctor);
-    setDoctorId(doctor._id);
-    setDoctorName(doctor.name);
-  };
-
-  // Fetch chat history when the doctorId and staffId are available
-  useEffect(() => {
-    if (!doctorId || !staffId) return;
-
-    setLoading(true);
-    const fetchChatHistory = async () => {
-      try {
-        const response = await axios.get(
-          `http://31.97.206.144:4051/api/staff/getchat/${staffId}/${doctorId}`
-        );
-
-        if (response.data.success) {
-          setMessages(response.data.messages);
-        } else {
-          setError('No chat history found.');
-        }
-      } catch (err) {
-        setError('Error fetching chat history.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchChatHistory();
-
-    // Join the socket room for real-time chat
-    socket.emit('joinRoom', { staffId, doctorId });
-
-    // Listen for incoming messages
-    socket.on('receiveMessage', (message) => {
-      setMessages((prevMessages) => [...prevMessages, message]);
-    });
-
-    // Listen for typing indicator
-    socket.on('typing', (senderId) => {
-      if (senderId !== staffId) {
-        setIsTyping(true);
-        setTimeout(() => setIsTyping(false), 2000);
-      }
-    });
-
-    // Clean up the listener on component unmount
-    return () => {
-      socket.off('receiveMessage');
-      socket.off('typing');
-    };
-  }, [staffId, doctorId]);
-
-  // Handle sending a message
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() && !file) return;
-
-    const messageData = {
-      staffId,
-      doctorId,
-      message: newMessage,
-      senderType: 'staff',
-    };
-
-    // If file is present, include it
-    if (file) {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('message', newMessage);
-      formData.append('senderType', 'staff');
-
-      try {
-        const response = await axios.post(
-          `http://31.97.206.144:4051/api/staff/sendchat/${staffId}/${doctorId}`,
-          formData,
-          { headers: { 'Content-Type': 'multipart/form-data' } }
-        );
-
-        if (response.data.success) {
-          socket.emit('sendMessage', response.data.chat);
-          setFile(null);
-          setNewMessage('');
-        } else {
-          setError('Failed to send message.');
-        }
-      } catch (err) {
-        console.error('Error while sending message:', err);
-        setError('Error sending message.');
-      }
-    } else {
-      try {
-        // Send text message only
-        const response = await axios.post(
-          `http://31.97.206.144:4051/api/staff/sendchat/${staffId}/${doctorId}`,
-          messageData
-        );
-
-        if (response.data.success) {
-          socket.emit('sendMessage', response.data.chat);
-          setNewMessage('');
-        } else {
-          setError('Failed to send message.');
-        }
-      } catch (err) {
-        console.error('Error while sending message:', err);
-        setError('Error sending message.');
-      }
-    }
-  };
-
-  // Handle file upload
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setFile(file);
-      // Auto-send file if no message text
-      if (!newMessage.trim()) {
-        setTimeout(() => handleSendMessage(), 100);
-      }
-    }
-  };
-
-  // Handle typing indicator
-  const handleTyping = () => {
-    socket.emit('typing', staffId);
-  };
-
-  // Handle pressing Enter to send
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  // Remove file from message
-  const removeFile = () => {
-    setFile(null);
-  };
-
-  // Go back to doctors list
-  const handleBackToDoctors = () => {
-    setSelectedDoctor(null);
-    setDoctorId(null);
-    setMessages([]);
   };
 
   return (
-// Doctors list with Back Arrow
-<div className="flex-1 overflow-y-auto">
-    <Navbar/>
+    <div className="fixed inset-0 bg-white flex flex-col">
+      {/* Header with back arrow */}
+      <div className="flex items-center px-4 py-3 border-b border-gray-200">
+        <button 
+          onClick={() => window.history.back()}
+          className="mr-3 text-gray-700 hover:text-gray-900 focus:outline-none"
+        >
+          <FaArrowLeft className="text-lg sm:text-xl" />
+        </button>
+        <h4 className="text-lg sm:text-xl font-semibold flex-1">AI Chat</h4>
+        {isTyping && (
+          <div className="flex items-center">
+            <div className="flex space-x-1">
+              <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce"></div>
+              <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce animation-delay-200"></div>
+              <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce animation-delay-400"></div>
+            </div>
+            <span className="ml-2 text-xs sm:text-sm text-gray-600">Thinking...</span>
+          </div>
+        )}
+      </div>
 
-  {/* 🔙 Back Button + Heading */}
-  <div className="flex items-center mb-4">
-    <h2 className="text-xl font-semibold">Select a Doctor to Chat With</h2>
-  </div>
-      {/* If no doctor is selected, show the list of doctors */}
-      {!selectedDoctor ? (
-        <div className="flex-1 overflow-y-auto p-4">
-          {doctorsLoading ? (
-            <div className="flex justify-center items-center h-full">
-              <p className="text-gray-500">Loading doctors...</p>
-            </div>
-          ) : error ? (
-            <div className="flex justify-center items-center h-full">
-              <p className="text-red-500">{error}</p>
-            </div>
-          ) : doctors.length === 0 ? (
-            <div className="flex justify-center items-center h-full">
-              <p className="text-gray-500">No doctors found. You need to have a booking with a doctor first.</p>
+      {/* Chat area */}
+      <div className="flex-1 overflow-y-auto p-4" ref={chatContainerRef}>
+        <div className="space-y-3 sm:space-y-4">
+          {chatMessages.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">
+              <p>Start a conversation with Allude! Assistant</p>
+              <p className="text-sm mt-2">Ask anything about our products or services</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4">
-              {doctors.map((doctor) => (
-                <div
-                  key={doctor._id}
-                  className="bg-white p-4 rounded-lg shadow cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => handleSelectDoctor(doctor)}
-                >
-                  <div className="flex items-center">
-                    <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold mr-3">
-                      {doctor.name.charAt(0)}
-                    </div>
-                    <div>
-                      <h3 className="font-semibold">{doctor.name}</h3>
-                      <p className="text-sm text-gray-600">{doctor.specialization || 'General Doctor'}</p>
-                    </div>
+            chatMessages.map((msg, index) => {
+              const isUser = msg.sender === "User";
+              const direction = isUser ? "justify-end" : "justify-start";
+
+              return (
+                <div key={index} className={`flex ${direction}`}>
+                  <div className={`max-w-[85%] sm:max-w-[75%] ${isUser ? "bg-blue-100" : "bg-gray-100"} p-2 sm:p-3 rounded-lg`}>
+                    {!isUser && (
+                      <div className="text-xs font-medium text-gray-700 mb-1">{msg.sender}</div>
+                    )}
+                    <div className="text-xs sm:text-sm break-words">{msg.message}</div>
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })
           )}
         </div>
-      ) : (
-        <>
-          {/* Chat Header */}
-          <div className="bg-blue-600 text-white p-4 flex items-center">
-            <button 
-              onClick={handleBackToDoctors}
-              className="mr-2 p-1 rounded-full hover:bg-blue-700 transition-colors"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
-            <div className="w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center text-white font-bold mr-3">
-              {doctorName.charAt(0)}
-            </div>
-            <div>
-              <h2 className="font-semibold">{doctorName}</h2>
-              {isTyping && (
-                <p className="text-xs text-blue-200">typing...</p>
-              )}
-            </div>
-          </div>
+        <div ref={messagesEndRef} />
+      </div>
 
-          {/* Messages Container */}
-          <div className="flex-1 overflow-y-auto p-4 bg-gray-100 bg-chat-background bg-opacity-5">
-            {loading ? (
-              <div className="flex justify-center items-center h-full">
-                <p className="text-gray-500">Loading chat history...</p>
-              </div>
-            ) : error ? (
-              <div className="flex justify-center items-center h-full">
-                <p className="text-red-500">{error}</p>
-              </div>
-            ) : messages.length === 0 ? (
-              <div className="flex justify-center items-center h-full">
-                <p className="text-gray-500">No messages yet. Start a conversation!</p>
-              </div>
-            ) : (
-              messages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`flex mb-4 ${msg.senderId === staffId ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-xs lg:max-w-md rounded-lg p-3 ${
-                      msg.senderId === staffId 
-                        ? 'bg-blue-100 rounded-br-none' 
-                        : 'bg-white rounded-bl-none'
-                    }`}
-                  >
-                    {msg.senderId !== staffId && (
-                      <p className="text-xs font-semibold text-gray-700 mb-1">
-                        {msg.sender || 'Doctor'}
-                      </p>
-                    )}
-                    {msg.message && (
-                      <p className="text-gray-800">{msg.message}</p>
-                    )}
-                    {msg.file && (
-                      <div className="mt-2">
-                        <a
-                          href={msg.file}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center text-blue-500 hover:underline"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                          </svg>
-                          View File
-                        </a>
-                      </div>
-                    )}
-                    <p className="text-xs text-gray-500 mt-1 text-right">
-                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                </div>
-              ))
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input Area */}
-          <div className="bg-white border-t border-gray-300 p-3">
-            {file && (
-              <div className="flex items-center justify-between bg-blue-50 p-2 rounded-md mb-2">
-                <div className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                  </svg>
-                  <span className="text-sm truncate max-w-xs">{file.name}</span>
-                </div>
-                <button onClick={removeFile} className="text-red-500 hover:text-red-700">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            )}
-            
-            <div className="flex items-center">
-              <label htmlFor="file-upload" className="cursor-pointer mr-2 text-gray-500 hover:text-gray-700">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                </svg>
-                <input
-                  id="file-upload"
-                  type="file"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-              </label>
-              
-              <div className="flex-1 bg-gray-100 rounded-full mr-2">
-                <textarea
-                  className="w-full bg-transparent border-none focus:outline-none p-3 resize-none"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={(e) => {
-                    handleTyping();
-                    handleKeyPress(e);
-                  }}
-                  placeholder="Type a message"
-                  rows="1"
-                ></textarea>
-              </div>
-              
-              <button
-                onClick={handleSendMessage}
-                disabled={!newMessage.trim() && !file}
-                className={`p-3 rounded-full ${
-                  newMessage.trim() || file ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300'
-                } text-white`}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+      {/* Input area */}
+      <div className="p-3 border-t border-gray-200 flex items-center space-x-2 sm:space-x-3">
+        <input
+          type="text"
+          ref={messageInputRef}
+          className="flex-1 p-2 sm:p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-xs sm:text-sm"
+          placeholder="Type your message..."
+          onKeyDown={(e) => e.key === "Enter" && handleSendRequest()}
+        />
+        <button
+          onClick={handleSendRequest}
+          className="bg-blue-500 text-white p-2 sm:p-3 rounded-full hover:bg-blue-600 focus:outline-none transition-colors"
+          aria-label="Send message"
+        >
+          <FaPaperPlane className="text-sm sm:text-base" />
+        </button>
+      </div>
     </div>
   );
 };
 
-export default ChatPage;
+export default ChatComponent;

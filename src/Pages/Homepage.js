@@ -20,12 +20,14 @@ const HomePage = () => {
       <div className="pt-[90px] bg-gray-50 flex-1 mb-5">
         {/* Banner */}
         <ProfileHeader />
-        <BannerCarousel />
+        <div className="my-2">
+          <BannerCarousel />
+        </div>
 
         {/* Other Sections */}
         <StoryPage />
         <FestivalPage />
-        <PremiumPoster />
+        {/* <PremiumPoster /> */}
         <CategoryWisePoster />
       </div>
 

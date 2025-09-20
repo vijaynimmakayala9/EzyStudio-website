@@ -25,7 +25,7 @@ const BannerCarousel = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64 md:h-80 lg:h-96 bg-gray-100">
+      <div className="flex justify-center items-center h-64 md:h-80 lg:h-96 bg-gray-100 rounded-lg border border-gray-200 shadow-sm">
         <div className="text-center">
           <FaSpinner className="animate-spin text-4xl text-blue-500 mx-auto mb-3" />
           <p className="text-gray-600">Loading banners...</p>
@@ -36,7 +36,7 @@ const BannerCarousel = () => {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center h-64 md:h-80 lg:h-96 bg-gray-100">
+      <div className="flex justify-center items-center h-64 md:h-80 lg:h-96 bg-gray-100 rounded-lg border border-gray-200 shadow-sm">
         <div className="text-center p-4 bg-red-50 rounded-lg border border-red-200 max-w-md mx-auto">
           <p className="text-red-600 font-medium">{error}</p>
           <button 
@@ -52,7 +52,7 @@ const BannerCarousel = () => {
 
   if (banners.length === 0) {
     return (
-      <div className="flex justify-center items-center h-64 md:h-80 lg:h-96 bg-gray-100">
+      <div className="flex justify-center items-center h-64 md:h-80 lg:h-96 bg-gray-100 rounded-lg border border-gray-200 shadow-sm">
         <div className="text-center">
           <p className="text-gray-600">No banners available at the moment.</p>
         </div>
@@ -61,40 +61,30 @@ const BannerCarousel = () => {
   }
 
   return (
-    <div className="w-full overflow-hidden">
-      <Carousel
-        interval={4000}
-        controls={banners.length > 1}
-        indicators={banners.length > 1}
-        wrap={true}
-        pause={false}
-        className="w-full"
-      >
-        {banners.map((banner, index) => (
-          <Carousel.Item key={index}>
-            <div
-              className="w-full h-48 xs:h-56 sm:h-64 md:h-80 lg:h-96 xl:h-[500px] bg-cover bg-center relative"
-              style={{ 
-                backgroundImage: `url(${banner.images[0]})`,
-                backgroundPosition: "center center"
-              }}
-            >
-              {/* Optional: Add overlay for better text visibility if needed */}
-              {/* <div className="absolute inset-0 bg-black bg-opacity-20"></div> */}
-              
-              {/* Optional: Add caption/text if available in banner data */}
-              {/* {banner.title && (
-                <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-4">
-                  <h3 className="text-lg font-semibold">{banner.title}</h3>
-                  {banner.description && <p>{banner.description}</p>}
-                </div>
-              )} */}
-            </div>
-          </Carousel.Item>
-        ))}
-      </Carousel>
-    </div>
-  );
+  <div className="w-full overflow-hidden rounded-xl border border-gray-200 shadow-[0_4px_20px_rgba(59,130,246,0.25)]">
+    <Carousel
+      interval={4000}
+      controls={banners.length > 1}
+      indicators={banners.length > 1}
+      wrap={true}
+      pause={false}
+      className="w-full"
+    >
+      {banners.map((banner, index) => (
+        <Carousel.Item key={index}>
+          <div
+            className="w-full h-48 xs:h-56 sm:h-64 md:h-80 lg:h-96 xl:h-[500px] bg-cover bg-center relative"
+            style={{
+              backgroundImage: `url(${banner.images[0]})`,
+              backgroundPosition: "center center",
+            }}
+          ></div>
+        </Carousel.Item>
+      ))}
+    </Carousel>
+  </div>
+);
+
 };
 
 export default BannerCarousel;

@@ -92,6 +92,7 @@ const CategoryPoster = () => {
                   <div
                     key={poster._id}
                     className="rounded-xl shadow-md overflow-hidden border hover:scale-105 transition-transform duration-200"
+                    onClick={() => navigate(`/posters/${poster._id}`)}
                   >
                     <img
                       src={poster.posterImage?.url || "/placeholder.png"}

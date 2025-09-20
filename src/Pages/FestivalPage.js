@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Spinner } from "react-bootstrap";
+import { useNavigate } from "react-router-dom";
 
 const API_URL = "http://194.164.148.244:4061/api/poster/festival";
 
@@ -26,6 +27,8 @@ const FestivalPage = () => {
   const [loading, setLoading] = useState(false);
   const [festivals, setFestivals] = useState([]);
   const [error, setError] = useState("");
+
+  const navigate = useNavigate();
 
   // prepare next 5 dates
   useEffect(() => {
@@ -136,7 +139,7 @@ const FestivalPage = () => {
           </div>
         ) : (
           festivals.map((f) => (
-            <div key={f._id || Math.random()} className="festival-card">
+            <div key={f._id || Math.random()} className="festival-card" onClick={() => navigate(`/posters/${f._id}`)}>
               <img
                 src={
                   f.posterImage?.url ||

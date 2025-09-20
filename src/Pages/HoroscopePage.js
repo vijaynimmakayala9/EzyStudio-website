@@ -74,7 +74,7 @@ const HoroscopePage = () => {
     <>
       <Navbar />
       <div
-        className="min-h-screen text-white px-4 sm:px-6 md:px-10 py-6"
+        className="min-h-screen text-white px-4 sm:px-6 md:px-10 py-6 mb-5"
         style={{ background: `linear-gradient(to bottom right, ${theme.primary}, #0f1120)` }}
       >
         {/* Heading */}
