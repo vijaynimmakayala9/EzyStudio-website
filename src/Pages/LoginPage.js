@@ -8,50 +8,117 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isSafari, setIsSafari] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
   const navigate = useNavigate();
 
-  // Detect if the app is installed or not
+  // Detect device and browser types
   useEffect(() => {
+    // Check if app is already installed
     const checkIfInstalled = () => {
       return window.matchMedia("(display-mode: standalone)").matches || 
              window.navigator.standalone === true;
     };
-
-    if (!checkIfInstalled() && !localStorage.getItem("appInstalled")) {
-      setShowInstallPrompt(true); // Show modal if not installed
-    }
-
+    
+    setIsStandalone(checkIfInstalled());
+    
+    // Check if iOS
+    const iosCheck = () => {
+      return [
+        'iPad Simulator',
+        'iPhone Simulator',
+        'iPod Simulator',
+        'iPad',
+        'iPhone',
+        'iPod'
+      ].includes(navigator.platform) ||
+      (navigator.userAgent.includes("Mac") && "ontouchend" in document);
+    };
+    
+    setIsIOS(iosCheck());
+    
+    // Check if Safari
+    const isSafariCheck = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    setIsSafari(isSafariCheck);
+    
+    // Handle beforeinstallprompt event for Android
     const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault(); // Prevent mini-infobar
+      e.preventDefault();
       setDeferredPrompt(e);
-      setShowInstallPrompt(true);
+      
+      // Only show prompt if not already installed and not recently dismissed
+      const promptDismissed = localStorage.getItem("installPromptDismissed");
+      const promptDismissedTime = localStorage.getItem("installPromptDismissedTime");
+      const oneWeekAgo = new Date().getTime() - (7 * 24 * 60 * 60 * 1000);
+      
+      if (!isStandalone && (!promptDismissed || parseInt(promptDismissedTime) < oneWeekAgo)) {
+        setShowInstallPrompt(true);
+      }
     };
 
+    // Handle app installed event
     const handleAppInstalled = () => {
       localStorage.setItem("appInstalled", "true");
+      localStorage.removeItem("installPromptDismissed");
       setShowInstallPrompt(false);
+      setIsStandalone(true);
+    };
+
+    // Check if we should show install prompt for iOS
+    const checkIOSInstallPrompt = () => {
+      if (isIOS && !isStandalone) {
+        const promptDismissed = localStorage.getItem("installPromptDismissed");
+        const promptDismissedTime = localStorage.getItem("installPromptDismissedTime");
+        const oneWeekAgo = new Date().getTime() - (7 * 24 * 60 * 60 * 1000);
+        
+        if (!promptDismissed || parseInt(promptDismissedTime) < oneWeekAgo) {
+          setShowInstallPrompt(true);
+        }
+      }
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     window.addEventListener("appinstalled", handleAppInstalled);
 
+    // Check for iOS install prompt after initial render
+    const timer = setTimeout(checkIOSInstallPrompt, 3000);
+
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       window.removeEventListener("appinstalled", handleAppInstalled);
+      clearTimeout(timer);
     };
-  }, []);
+  }, [isStandalone]);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-
-    if (outcome === "accepted") {
-      localStorage.setItem("appInstalled", "true");
+    // For Android
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      
+      if (outcome === "accepted") {
+        localStorage.setItem("appInstalled", "true");
+        localStorage.removeItem("installPromptDismissed");
+        setShowInstallPrompt(false);
+      }
+      setDeferredPrompt(null);
+    } 
+    // For iOS - we can't programmatically add to home screen,
+    // so we show instructions instead
+    else if (isIOS) {
+      // Instructions are already shown in the modal for iOS
+      // Here we just mark that the user has seen the prompt
+      localStorage.setItem("installPromptDismissed", "true");
+      localStorage.setItem("installPromptDismissedTime", new Date().getTime());
       setShowInstallPrompt(false);
     }
-    setDeferredPrompt(null);
+  };
+
+  const handleDismissPrompt = () => {
+    localStorage.setItem("installPromptDismissed", "true");
+    localStorage.setItem("installPromptDismissedTime", new Date().getTime());
+    setShowInstallPrompt(false);
   };
 
   const handleSubmit = async (e) => {
@@ -87,10 +154,24 @@ const LoginPage = () => {
     }
   };
 
+  // Instructions for iOS Safari users
+  const iOSInstallInstructions = () => (
+    <div className="mt-4 text-left text-sm text-gray-600 bg-gray-50 p-4 rounded-lg">
+      <p className="font-medium mb-2">To install this app:</p>
+      <ol className="list-decimal pl-5 space-y-1">
+        <li>Tap the <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+        </svg> Share icon</li>
+        <li>Scroll down and select "Add to Home Screen"</li>
+        <li>Tap "Add" in the top right corner</li>
+      </ol>
+    </div>
+  );
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-gray-50">
       {/* Install Prompt Modal */}
-      {showInstallPrompt && !localStorage.getItem("appInstalled") && (
+      {showInstallPrompt && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
             <div className="text-center">
@@ -100,26 +181,45 @@ const LoginPage = () => {
                 </svg>
               </div>
               <h3 className="text-xl font-semibold text-gray-800 mb-2">Install App</h3>
-              <p className="text-gray-600 mb-6">Add this app to your home screen for a better experience</p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={handleInstallClick}
-                  className="flex-1 bg-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
-                >
-                  Add to Home Screen
-                </button>
-                <button
-                  onClick={() => setShowInstallPrompt(false)}
-                  className="flex-1 border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-                >
-                  Maybe Later
-                </button>
+              <p className="text-gray-600 mb-4">
+                {isIOS 
+                  ? "Install this app on your iPhone for a better experience." 
+                  : "Add this app to your home screen for a better experience"}
+              </p>
+              
+              {isIOS && iOSInstallInstructions()}
+              
+              <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                {!isIOS ? (
+                  <>
+                    <button
+                      onClick={handleInstallClick}
+                      className="flex-1 bg-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                    >
+                      Add to Home Screen
+                    </button>
+                    <button
+                      onClick={handleDismissPrompt}
+                      className="flex-1 border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                    >
+                      Maybe Later
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={handleDismissPrompt}
+                    className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                  >
+                    Got It
+                  </button>
+                )}
               </div>
             </div>
           </div>
         </div>
       )}
 
+      {/* Rest of your login page UI remains the same */}
       {/* Left side */}
       <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-indigo-600 to-purple-700 items-center justify-center p-12">
         <div className="text-white text-center max-w-md">
@@ -232,18 +332,20 @@ const LoginPage = () => {
             <p>By continuing, you agree to our Terms of Service and Privacy Policy</p>
           </div>
 
-          {/* Manual Add to Home Screen - Mobile */}
-          <div className="mt-6 text-center">
-            <button 
-              onClick={() => setShowInstallPrompt(true)}
-              className="text-sm text-indigo-600 hover:text-indigo-500 flex items-center justify-center mx-auto"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Add to Home Screen
-            </button>
-          </div>
+          {/* Manual Add to Home Screen - Only show if not installed and not iOS */}
+          {!isStandalone && !isIOS && (
+            <div className="mt-6 text-center">
+              <button 
+                onClick={() => setShowInstallPrompt(true)}
+                className="text-sm text-indigo-600 hover:text-indigo-500 flex items-center justify-center mx-auto"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Add to Home Screen
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
